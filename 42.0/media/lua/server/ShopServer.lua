@@ -271,7 +271,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " DEPOSITED physical money for $" .. tostring(totalDeposited) .. " | Bal: $"..prevBalance.." -> $"..newBalance
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="+$" .. tostring(totalDeposited) .. " (Deposit)", color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -308,7 +309,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " TRANSFERRED $" .. tostring(amount) .. " to " .. targetUser .. " | Bal: $"..senderBalance.." -> $"..(senderBalance - amount)
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Transferred $" .. tostring(amount) .. " to " .. targetUser, color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -393,7 +395,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " BOUGHT " .. tostring(amount) .. "x " .. itemName .. " for $" .. tostring(totalCost) .. " | Bal: $"..prevBalance.." -> $"..newBalance
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
             
@@ -450,7 +453,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " CHECKOUT (" .. itemsStr .. ") for $" .. tostring(totalCost) .. " | Bal: $"..prevBalance.." -> $"..newBalance
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
             
@@ -506,7 +510,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " SOLD " .. tostring(amount - remaining) .. "x " .. itemName .. " for $" .. tostring(totalMoney) .. " | Bal: $"..prevBalance.." -> $"..newBalance
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="+$" .. tostring(totalMoney), color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -669,7 +674,8 @@ local function OnClientCommand(module, command, player, args)
                 end
                 shop.Stock[args.item].Count = shop.Stock[args.item].Count + added
                 
-                ProjectShopee.NeedsSave = true
+                SaveConfig()
+            BroadcastConfig()
                 sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Added " .. tostring(added) .. " to shop!", color={r=0, g=255, b=0}})
             end
         end
@@ -688,7 +694,8 @@ local function OnClientCommand(module, command, player, args)
             local logStr = "[" .. os.date("%m-%d %H:%M") .. "] " .. username .. " COLLECTED $" .. tostring(earnings) .. " from Personal Shop | Bal: $"..prevBalance.." -> $"..(prevBalance + earnings)
             LogTransaction(logStr)
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             SyncPlayerBalance(player)
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Collected $" .. tostring(earnings) .. "!", color={r=0, g=255, b=0}})
         end
@@ -740,7 +747,8 @@ local function OnClientCommand(module, command, player, args)
                 table.remove(shop.Logs)
             end
             
-            ProjectShopee.NeedsSave = true
+            SaveConfig()
+            BroadcastConfig()
             
             -- Give item to buyer (Drop on floor)
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
@@ -792,7 +800,8 @@ local function OnClientCommand(module, command, player, args)
             shop.Stock[args.item] = nil
         end
         
-        ProjectShopee.NeedsSave = true
+        SaveConfig()
+            BroadcastConfig()
         
         local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
         if square then
@@ -913,4 +922,5 @@ local function CleanupActiveCheckouts()
     end
 end
 Events.EveryOneMinute.Add(CleanupActiveCheckouts)
+
 
