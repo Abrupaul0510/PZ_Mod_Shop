@@ -120,8 +120,8 @@ function ShopDepositUI:onDepositAmount()
         local itemsToDeposit = {}
         itemsToDeposit[selectedItem.item.item] = amt
         
-        sendClientCommand("ProjectShopee", ProjectShopee.Commands.DepositMoney, {items = itemsToDeposit})
-        self:close()
+        sendClientCommand("ProjectShopee", ProjectShopee.Commands.DepositMoney, {items = itemsToDeposit, pos = self.pos})
+        self:refresh()
     end
 end
 
@@ -141,13 +141,14 @@ function ShopDepositUI:onDepositAll()
     end
     
     if hasMoney then
-        sendClientCommand("ProjectShopee", ProjectShopee.Commands.DepositMoney, {items = itemsToDeposit})
+        sendClientCommand("ProjectShopee", ProjectShopee.Commands.DepositMoney, {items = itemsToDeposit, pos = self.pos})
         self:close()
     else
         self.player:Say("I dont have that amount of money, Wag managarap :)")
         self:close()
     end
 end
+
 
 function ShopDepositUI:onTransferMoney()
     local targetUser = self.targetEntry:getText()
@@ -164,7 +165,7 @@ function ShopDepositUI:onTransferMoney()
         return
     end
     
-    sendClientCommand("ProjectShopee", ProjectShopee.Commands.TransferMoney, {target = targetUser, amount = amt})
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.TransferMoney, {target = targetUser, amount = amt, pos = self.pos})
     self:close()
 end
 

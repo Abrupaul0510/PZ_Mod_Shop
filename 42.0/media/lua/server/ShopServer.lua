@@ -288,8 +288,47 @@ end
 
 local PlayerCooldowns = {}
 
+local function VerifyDistance(player, posString)
+    if not posString or type(posString) ~= "string" then return false end
+    local parts = {}
+    for part in string.gmatch(posString, "([^,]+)") do table.insert(parts, tonumber(part)) end
+    if #parts == 3 then
+        local dx = player:getX() - parts[1]
+        local dy = player:getY() - parts[2]
+        local dz = player:getZ() - parts[3]
+        local dist = math.sqrt(dx*dx + dy*dy)
+        if dist <= 5 and dz == 0 then
+            return true
+        end
+    end
+    return false
+end
+
 local function OnClientCommand(module, command, player, args)
     if module ~= "ProjectShopee" then return end
+
+    local requireProximity = {
+        [ProjectShopee.Commands.BuyItem] = true,
+        [ProjectShopee.Commands.SellItem] = true,
+        [ProjectShopee.Commands.CheckoutCart] = true,
+        [ProjectShopee.Commands.DepositMoney] = true,
+        [ProjectShopee.Commands.TransferMoney] = true,
+        [ProjectShopee.Commands.BuyFromPersonalShop] = true,
+        [ProjectShopee.Commands.AddItemToPersonalShop] = true,
+        [ProjectShopee.Commands.RemoveItemFromPersonalShop] = true,
+        [ProjectShopee.Commands.CollectPSEarnings] = true,
+        [ProjectShopee.Commands.RequestOpenCheckout] = true,
+        [ProjectShopee.Commands.RequestOpenATM] = true,
+        [ProjectShopee.Commands.RequestOpenPersonalShop] = true
+    }
+    
+    if requireProximity[command] then
+        if not args or not args.pos or not VerifyDistance(player, args.pos) then
+            sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Transaction denied: Too far from target!", color={r=255, g=0, b=0}})
+            print("Project Shopee: Exploit Attempt? " .. player:getUsername() .. " tried to use command " .. command .. " from too far away.")
+            return
+        end
+    end
 
     -- Rate limiting: 100ms minimum between requests for transactions
     local isTransaction = (command == ProjectShopee.Commands.BuyItem) or 
