@@ -26,11 +26,15 @@ function ShopCheckoutUI:initialise()
     self.cartList.drawBorder = true
     self:addChild(self.cartList)
     
-    self.clearCartBtn = ISButton:new(10, self.height - btnHgt - 10, btnWid, btnHgt, "Clear Cart", self, self.onClearCart)
+    self.removeCartBtn = ISButton:new(10, self.height - btnHgt - 10, 80, btnHgt, "Remove", self, self.onRemoveCart)
+    self.removeCartBtn:initialise()
+    self:addChild(self.removeCartBtn)
+      
+    self.clearCartBtn = ISButton:new(95, self.height - btnHgt - 10, 80, btnHgt, "Clear", self, self.onClearCart)
     self.clearCartBtn:initialise()
     self:addChild(self.clearCartBtn)
-    
-    self.checkoutBtn = ISButton:new(10 + btnWid + 5, self.height - btnHgt - 10, self.width/2 - btnWid - 20, btnHgt, "CHECKOUT", self, self.onCheckout)
+      
+    self.checkoutBtn = ISButton:new(180, self.height - btnHgt - 10, self.width/2 - 180 - 5, btnHgt, "CHECKOUT", self, self.onCheckout)
     self.checkoutBtn:initialise()
     self.checkoutBtn.backgroundColor = {r=0, g=0.5, b=0, a=1.0}
     self.checkoutBtn.textColor = {r=1, g=1, b=1, a=1.0}
@@ -212,6 +216,17 @@ end
 function ShopCheckoutUI:onClearCart()
     ProjectShopee.Client.Cart = {}
     self:refresh()
+end
+
+function ShopCheckoutUI:onRemoveCart()
+    local sel = self.cartList.items[self.cartList.selected]
+    if not sel then return end
+    
+    local itemName = sel.item.name
+    if ProjectShopee.Client.Cart[itemName] then
+        ProjectShopee.Client.Cart[itemName] = nil
+        self:refresh()
+    end
 end
 
 function ShopCheckoutUI:onCheckout()
