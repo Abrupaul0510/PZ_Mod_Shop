@@ -16,19 +16,19 @@ local function SaveConfig()
         return
     end
 
+    local success, jsonStr = pcall(ProjectShopeeJson.encode, ProjectShopee.Config)
+    if not success or not jsonStr then
+        print("Project Shopee: Failed to encode config to JSON. Error: " .. tostring(jsonStr))
+        return
+    end
+
     local writer = getFileWriter("ProjectShopeeConfig.json", true, false)
     if not writer then 
         print("Project Shopee: Failed to get file writer for ProjectShopeeConfig.json")
         return 
     end
     
-    local success, jsonStr = pcall(ProjectShopeeJson.encode, ProjectShopee.Config)
-    if success and jsonStr then
-        writer:write(jsonStr)
-    else
-        print("Project Shopee: Failed to encode config to JSON. " .. tostring(jsonStr))
-    end
-    
+    writer:write(jsonStr)
     writer:close()
     ProjectShopee.NeedsSave = false
 end
