@@ -114,6 +114,11 @@ end
 function ShopPersonalBrowseUI:render()
     ISCollapsableWindow.render(self)
     self:drawText("Quantity:", 10, self.height - 90, 1, 1, 1, 1, UIFont.Small)
+    
+    local balance = ProjectShopee.Client.Balance or 0
+    local balanceText = "Digital Bank Balance: $" .. tostring(balance)
+    local textWid = getTextManager():MeasureStringX(UIFont.Small, balanceText)
+    self:drawText(balanceText, self.width - textWid - 10, self.height - 90, 0, 1, 0, 1, UIFont.Small)
 end
 
 function ShopPersonalBrowseUI:update()
