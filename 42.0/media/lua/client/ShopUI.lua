@@ -222,7 +222,7 @@ function ShopUI:onAddToCart()
     
     ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
     
-    local maxCartSize = 75
+    local maxCartSize = 20
     local currentTotal = 0
     for _, qty in pairs(ProjectShopee.Client.Cart) do
         currentTotal = currentTotal + qty
