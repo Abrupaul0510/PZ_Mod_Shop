@@ -11,7 +11,6 @@ local function trim(s)
 end
 
 local function SaveConfig()
-    ModData.transmit("ProjectShopee")
     ProjectShopee.NeedsSave = false
 end
 
@@ -274,7 +273,6 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="+$" .. tostring(totalDeposited) .. " (Deposit)", color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -312,7 +310,6 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Transferred $" .. tostring(amount) .. " to " .. targetUser, color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -398,7 +395,6 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
             
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
             
@@ -420,6 +416,7 @@ local function OnClientCommand(module, command, player, args)
     elseif command == ProjectShopee.Commands.CheckoutCart then
         local cart = args.cart
         if not cart then return end
+        if #cart > 50 then return end
         
         local totalCost = 0
         local itemsStrList = {}
@@ -456,7 +453,6 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
             
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
             
@@ -513,7 +509,6 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
             
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="+$" .. tostring(totalMoney), color={r=0, g=255, b=0}})
             SyncPlayerBalance(player)
@@ -542,6 +537,7 @@ local function OnClientCommand(module, command, player, args)
         
         if not ProjectShopee.ActiveCheckouts[pos] or ProjectShopee.ActiveCheckouts[pos] == username then
             ProjectShopee.ActiveCheckouts[pos] = username
+            sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             sendServerCommand(player, "ProjectShopee", "AllowOpenCheckout", {pos = pos})
         else
             sendServerCommand(player, "ProjectShopee", "DenyOpenCheckout", {pos = pos, message="Someone is already using this Checkout!"})
@@ -561,6 +557,7 @@ local function OnClientCommand(module, command, player, args)
         
         if not ProjectShopee.ActiveATMs[pos] or ProjectShopee.ActiveATMs[pos] == username then
             ProjectShopee.ActiveATMs[pos] = username
+            sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             sendServerCommand(player, "ProjectShopee", "AllowOpenATM", {pos = pos})
         else
             sendServerCommand(player, "ProjectShopee", "DenyOpenATM", {pos = pos, message="Someone is already using this ATM!"})
@@ -580,6 +577,7 @@ local function OnClientCommand(module, command, player, args)
         
         if not ProjectShopee.ActivePersonalShops[pos] or ProjectShopee.ActivePersonalShops[pos] == username then
             ProjectShopee.ActivePersonalShops[pos] = username
+            sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             sendServerCommand(player, "ProjectShopee", "AllowOpenPersonalShop", {pos = pos})
         else
             sendServerCommand(player, "ProjectShopee", "DenyOpenPersonalShop", {pos = pos, message="Someone is already browsing this Shop!"})
@@ -681,7 +679,7 @@ local function OnClientCommand(module, command, player, args)
                 shop.Stock[args.item].Count = shop.Stock[args.item].Count + added
                 
                 SaveConfig()
-            BroadcastConfig()
+                sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
                 sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Added " .. tostring(added) .. " to shop!", color={r=0, g=255, b=0}})
             end
         end
@@ -701,7 +699,7 @@ local function OnClientCommand(module, command, player, args)
             LogTransaction(logStr)
             
             SaveConfig()
-            BroadcastConfig()
+            sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             SyncPlayerBalance(player)
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Collected $" .. tostring(earnings) .. "!", color={r=0, g=255, b=0}})
         end
@@ -758,7 +756,7 @@ local function OnClientCommand(module, command, player, args)
             end
             
             SaveConfig()
-            BroadcastConfig()
+            sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             
             -- Give item to buyer (Drop on floor)
             local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
@@ -811,7 +809,7 @@ local function OnClientCommand(module, command, player, args)
         end
         
         SaveConfig()
-            BroadcastConfig()
+        sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
         
         local square = player:getSquare() or getCell():getGridSquare(math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
         if square then
