@@ -27,7 +27,7 @@ function ShopDepositUI:create()
     self.moneyList.drawBorder = true
     self:addChild(self.moneyList)
     
-    self.amountEntry = ISTextEntryBox:new("1", 10, self.height - 70, 60, 25)
+    self.amountEntry = ISTextEntryBox:new("", 10, self.height - 150, 60, 25)
     self.amountEntry:initialise()
     self.amountEntry:instantiate()
     self.amountEntry:setOnlyNumbers(true)
@@ -47,7 +47,7 @@ function ShopDepositUI:create()
     self.targetEntry:instantiate()
     self:addChild(self.targetEntry)
     
-    self.transferAmountEntry = ISTextEntryBox:new("1", 140, self.height - 70, 80, 25)
+    self.transferAmountEntry = ISTextEntryBox:new("", 140, self.height - 70, 80, 25)
     self.transferAmountEntry:initialise()
     self.transferAmountEntry:instantiate()
     self.transferAmountEntry:setOnlyNumbers(true)
@@ -93,7 +93,7 @@ function ShopDepositUI:populateList()
     
     if ProjectShopee.Config.MoneyRatios then
         for itemType, ratio in pairs(ProjectShopee.Config.MoneyRatios) do
-            local count = inv:getCountTypeRecurse(itemType)
+            local count = inv:getCountType(itemType)
             if count > 0 then
                 self.moneyList:addItem(itemType, {item=itemType, ratio=ratio, count=count})
             end
