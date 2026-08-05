@@ -11,105 +11,26 @@ local function trim(s)
 end
 
 local function SaveConfig()
-    local writer = getFileWriter("ProjectShopeeConfig.txt", true, false)
-    if not writer then return end
-    
-    writer:write("SHOPS\n")
-    for pos, data in pairs(ProjectShopee.Config.Shops) do
-        writer:write(pos .. "\n")
-        if type(data) == "table" then
-            if data.Name then
-                writer:write("NAME=" .. data.Name .. "\n")
-            end
-            if data.Items then
-                for item, _ in pairs(data.Items) do
-                    writer:write("ITEM=" .. item .. "\n")
-                end
-            end
-        end
+    if not ProjectShopeeJson then
+        print("Project Shopee: Error - ProjectShopeeJson is not loaded. Cannot save config to JSON.")
+        return
+    end
+
+    local writer = getFileWriter("ProjectShopeeConfig.json", true, false)
+    if not writer then 
+        print("Project Shopee: Failed to get file writer for ProjectShopeeConfig.json")
+        return 
     end
     
-    writer:write("CHECKOUTS\n")
-    if ProjectShopee.Config.Checkouts then
-        for pos, _ in pairs(ProjectShopee.Config.Checkouts) do
-            writer:write(pos .. "\n")
-        end
-    end
-    
-    writer:write("ATMS\n")
-    if ProjectShopee.Config.ATMs then
-        for pos, _ in pairs(ProjectShopee.Config.ATMs) do
-            writer:write(pos .. "\n")
-        end
-    end
-    
-    writer:write("MONEY_RATIOS\n")
-    if ProjectShopee.Config.MoneyRatios then
-        for item, ratio in pairs(ProjectShopee.Config.MoneyRatios) do
-            writer:write(item .. "=" .. tostring(ratio) .. "\n")
-        end
-    end
-    
-    writer:write("PS_WHITELIST\n")
-    if ProjectShopee.Config.PersonalShopWhitelist then
-        for user, _ in pairs(ProjectShopee.Config.PersonalShopWhitelist) do
-            writer:write(user .. "\n")
-        end
-    end
-    
-    writer:write("PERSONAL_SHOPS\n")
-    if ProjectShopee.Config.PersonalShops then
-        for pos, data in pairs(ProjectShopee.Config.PersonalShops) do
-            writer:write("POS=" .. pos .. "\n")
-            writer:write("OWNER=" .. data.Owner .. "\n")
-            if data.Name then writer:write("NAME=" .. data.Name .. "\n") end
-            if data.IsOpen ~= nil then writer:write("ISOPEN=" .. tostring(data.IsOpen) .. "\n") end
-            writer:write("EARNINGS=" .. tostring(data.Earnings or 0) .. "\n")
-            for item, itemData in pairs(data.Stock or {}) do
-                writer:write("ITEM=" .. item .. "," .. tostring(itemData.Count) .. "," .. tostring(itemData.Price) .. "\n")
-            end
-            for _, logStr in ipairs(data.Logs or {}) do
-                writer:write("LOG=" .. logStr .. "\n")
-            end
-        end
-    end
-    
-    writer:write("CATALOG_BUY\n")
-    if ProjectShopee.Config.Catalog.Buy then
-        for item, price in pairs(ProjectShopee.Config.Catalog.Buy) do
-            writer:write(item .. "=" .. tostring(price) .. "\n")
-        end
-    end
-    
-    writer:write("CATALOG_SELL\n")
-    if ProjectShopee.Config.Catalog.Sell then
-        for item, price in pairs(ProjectShopee.Config.Catalog.Sell) do
-            writer:write(item .. "=" .. tostring(price) .. "\n")
-        end
-    end
-    
-    writer:write("CATALOG_LIMITS\n")
-    if ProjectShopee.Config.Catalog.Limits then
-        for item, limit in pairs(ProjectShopee.Config.Catalog.Limits) do
-            writer:write(item .. "=" .. tostring(limit) .. "\n")
-        end
-    end
-    
-    writer:write("BANK_BALANCES\n")
-    if ProjectShopee.Config.BankBalances then
-        for username, balance in pairs(ProjectShopee.Config.BankBalances) do
-            writer:write(username .. "=" .. tostring(balance) .. "\n")
-        end
-    end
-    
-    writer:write("TRANSACTION_LOGS\n")
-    if ProjectShopee.Config.TransactionLogs then
-        for _, logLine in ipairs(ProjectShopee.Config.TransactionLogs) do
-            writer:write(logLine .. "\n")
-        end
+    local success, jsonStr = pcall(ProjectShopeeJson.encode, ProjectShopee.Config)
+    if success and jsonStr then
+        writer:write(jsonStr)
+    else
+        print("Project Shopee: Failed to encode config to JSON. " .. tostring(jsonStr))
     end
     
     writer:close()
+    ProjectShopee.NeedsSave = false
 end
 
 local function BroadcastConfig()
@@ -134,135 +55,56 @@ end
 Events.EveryOneMinute.Add(PeriodicSave)
 
 local function LoadConfig()
-    local reader = getFileReader("ProjectShopeeConfig.txt", false)
-    if not reader then return end
-    
-    ProjectShopee.Config.Shops = {}
-    ProjectShopee.Config.Checkouts = {}
-    ProjectShopee.Config.ATMs = {}
-    ProjectShopee.Config.PersonalShopWhitelist = {}
-    ProjectShopee.Config.PersonalShops = {}
-    ProjectShopee.Config.MoneyRatios = {
-        ["Base.Money"] = 1,
-        ["Base.MoneyBundle"] = 100
-    }
-    ProjectShopee.Config.Catalog = { Buy = {}, Sell = {}, Limits = {} }
-    ProjectShopee.Config.BankBalances = {}
-    ProjectShopee.Config.TransactionLogs = {}
-    
-    local mode = ""
-    local currentPos = ""
-    local line = reader:readLine()
-    local lastPos = nil
-    
-    while line ~= nil do
-        line = trim(line)
-        if line == "SHOPS" or line == "CHECKOUTS" or line == "ATMS" or line == "MONEY_RATIOS" or line == "PS_WHITELIST" or line == "PERSONAL_SHOPS" or line == "CATALOG_BUY" or line == "CATALOG_SELL" or line == "CATALOG_LIMITS" or line == "BANK_BALANCES" or line == "TRANSACTION_LOGS" then
-            mode = line
-        elseif line ~= "" then
-            if mode == "SHOPS" then
-                if string.sub(line, 1, 5) == "ITEM=" then
-                    local item = string.sub(line, 6)
-                    if lastPos and type(ProjectShopee.Config.Shops[lastPos]) == "table" then
-                        ProjectShopee.Config.Shops[lastPos].Items[item] = true
-                    end
-                elseif string.sub(line, 1, 5) == "NAME=" then
-                    local name = string.sub(line, 6)
-                    if lastPos and type(ProjectShopee.Config.Shops[lastPos]) == "table" then
-                        ProjectShopee.Config.Shops[lastPos].Name = name
-                    end
-                else
-                    ProjectShopee.Config.Shops[line] = { Items = {} }
-                    lastPos = line
-                end
-            elseif mode == "CHECKOUTS" then
-                ProjectShopee.Config.Checkouts[line] = true
-            elseif mode == "ATMS" then
-                ProjectShopee.Config.ATMs[line] = true
-            elseif mode == "MONEY_RATIOS" then
-                local equalsPos = string.find(line, "=")
-                if equalsPos then
-                    local item = string.sub(line, 1, equalsPos - 1)
-                    local ratio = tonumber(string.sub(line, equalsPos + 1))
-                    if item and ratio then
-                        ProjectShopee.Config.MoneyRatios[item] = ratio
-                    end
-                end
-            elseif mode == "PS_WHITELIST" then
-                ProjectShopee.Config.PersonalShopWhitelist[line] = true
-            elseif mode == "PERSONAL_SHOPS" then
-                if string.sub(line, 1, 4) == "POS=" then
-                    currentPos = string.sub(line, 5)
-                    ProjectShopee.Config.PersonalShops[currentPos] = {
-                        Owner = "",
-                        Earnings = 0,
-                        Stock = {},
-                        Logs = {}
-                    }
-                elseif string.sub(line, 1, 6) == "OWNER=" and currentPos ~= "" then
-                    ProjectShopee.Config.PersonalShops[currentPos].Owner = string.sub(line, 7)
-                elseif string.sub(line, 1, 5) == "NAME=" and currentPos ~= "" then
-                    ProjectShopee.Config.PersonalShops[currentPos].Name = string.sub(line, 6)
-                elseif string.sub(line, 1, 7) == "ISOPEN=" and currentPos ~= "" then
-                    ProjectShopee.Config.PersonalShops[currentPos].IsOpen = (string.sub(line, 8) == "true")
-                elseif string.sub(line, 1, 9) == "EARNINGS=" and currentPos ~= "" then
-                    ProjectShopee.Config.PersonalShops[currentPos].Earnings = tonumber(string.sub(line, 10)) or 0
-                elseif string.sub(line, 1, 4) == "LOG=" and currentPos ~= "" then
-                    table.insert(ProjectShopee.Config.PersonalShops[currentPos].Logs, string.sub(line, 5))
-                elseif string.sub(line, 1, 5) == "ITEM=" and currentPos ~= "" then
-                    local parts = {}
-                    for match in string.gmatch(string.sub(line, 6), "[^,]+") do table.insert(parts, match) end
-                    if #parts == 3 then
-                        ProjectShopee.Config.PersonalShops[currentPos].Stock[parts[1]] = {
-                            Count = tonumber(parts[2]) or 1,
-                            Price = tonumber(parts[3]) or 1
-                        }
-                    end
-                end
-            elseif mode == "CATALOG_BUY" then
-                local equalsPos = string.find(line, "=")
-                if equalsPos then
-                    local item = string.sub(line, 1, equalsPos - 1)
-                    local price = tonumber(string.sub(line, equalsPos + 1))
-                    if item and price then
-                        ProjectShopee.Config.Catalog.Buy[item] = price
-                    end
-                end
-            elseif mode == "CATALOG_SELL" then
-                local equalsPos = string.find(line, "=")
-                if equalsPos then
-                    local item = string.sub(line, 1, equalsPos - 1)
-                    local price = tonumber(string.sub(line, equalsPos + 1))
-                    if item and price then
-                        ProjectShopee.Config.Catalog.Sell[item] = price
-                    end
-                end
-            elseif mode == "CATALOG_LIMITS" then
-                local equalsPos = string.find(line, "=")
-                if equalsPos then
-                    local item = string.sub(line, 1, equalsPos - 1)
-                    local limit = tonumber(string.sub(line, equalsPos + 1))
-                    if item and limit then
-                        ProjectShopee.Config.Catalog.Limits[item] = limit
-                    end
-                end
-            elseif mode == "BANK_BALANCES" then
-                local equalsPos = string.find(line, "=")
-                if equalsPos then
-                    local username = string.sub(line, 1, equalsPos - 1)
-                    local balance = tonumber(string.sub(line, equalsPos + 1))
-                    if username and balance then
-                        ProjectShopee.Config.BankBalances[username] = balance
-                    end
-                end
-            elseif mode == "TRANSACTION_LOGS" then
-                table.insert(ProjectShopee.Config.TransactionLogs, line)
-            end
-        end
-        line = reader:readLine()
+    if not ProjectShopeeJson then
+        print("Project Shopee: Error - ProjectShopeeJson is not loaded. Cannot load JSON config.")
+        return
+    end
+
+    local reader = getFileReader("ProjectShopeeConfig.json", false)
+    if not reader then 
+        -- If JSON doesn't exist, it means either it's the first run, or they are upgrading from the old .txt
+        print("Project Shopee: ProjectShopeeConfig.json not found, attempting to migrate from .txt if exists...")
+        -- Optionally, we could still load the .txt here if we wanted a fallback, but we'll start fresh if not found.
+        
+        ProjectShopee.Config = {
+            Shops = {},
+            Checkouts = {},
+            ATMs = {},
+            PersonalShopWhitelist = {},
+            PersonalShops = {},
+            MoneyRatios = {
+                ["Base.Money"] = 1,
+                ["Base.MoneyBundle"] = 100
+            },
+            Catalog = { Buy = {}, Sell = {}, Limits = {} },
+            BankBalances = {},
+            TransactionLogs = {}
+        }
+        return 
     end
     
+    local content = ""
+    local line = reader:readLine()
+    while line ~= nil do
+        content = content .. line
+        line = reader:readLine()
+    end
     reader:close()
+    
+    if content == "" then return end
+    
+    local success, decoded = pcall(ProjectShopeeJson.decode, content)
+    if success and decoded then
+        ProjectShopee.Config = decoded
+        print("Project Shopee: Successfully loaded ProjectShopeeConfig.json")
+    else
+        print("Project Shopee: Error decoding JSON config! Starting fresh. Error: " .. tostring(decoded))
+        ProjectShopee.Config = {
+            Shops = {}, Checkouts = {}, ATMs = {}, PersonalShopWhitelist = {}, PersonalShops = {},
+            MoneyRatios = { ["Base.Money"] = 1, ["Base.MoneyBundle"] = 100 },
+            Catalog = { Buy = {}, Sell = {}, Limits = {} }, BankBalances = {}, TransactionLogs = {}
+        }
+    end
     
     print("Project Shopee: Loaded Config from File!")
     for k, v in pairs(ProjectShopee.Config.Shops) do
