@@ -127,6 +127,10 @@ function ShopPersonalManageUI:onRename()
 end
 
 function ShopPersonalManageUI:onRemoveItem()
+    if self.actionCooldown and self.actionCooldown > 0 then return end
+    self.actionCooldown = 30
+    self.removeBtn:setEnable(false)
+    self.removeBtn.title = "Wait..."
     local selectedItem = self.list.items[self.list.selected]
     if not selectedItem or not selectedItem.item then return end
     
@@ -172,6 +176,14 @@ end
 
 function ShopPersonalManageUI:update()
     ISCollapsableWindow.update(self)
+    
+    if self.actionCooldown and self.actionCooldown > 0 then
+        self.actionCooldown = self.actionCooldown - 1
+        if self.actionCooldown <= 0 then
+            self.removeBtn:setEnable(true)
+            self.removeBtn.title = "Take Back Item"
+        end
+    end
     
     if self.amountEntry then
         local text = self.amountEntry:getText()
@@ -239,5 +251,7 @@ function ShopPersonalManageUI:close()
     oldClose(self)
     ShopPersonalManageUI.instance = nil
 end
+
+
 
 

@@ -84,6 +84,10 @@ function ShopPersonalBrowseUI:populateList()
 end
 
 function ShopPersonalBrowseUI:onBuy()
+    if self.actionCooldown and self.actionCooldown > 0 then return end
+    self.actionCooldown = 30
+    self.buyBtn:setEnable(false)
+    self.buyBtn.title = "Wait..."
     local selectedItem = self.list.items[self.list.selected]
     if not selectedItem or not selectedItem.item then return end
     
@@ -133,6 +137,14 @@ end
 
 function ShopPersonalBrowseUI:update()
     ISCollapsableWindow.update(self)
+    
+    if self.actionCooldown and self.actionCooldown > 0 then
+        self.actionCooldown = self.actionCooldown - 1
+        if self.actionCooldown <= 0 then
+            self.buyBtn:setEnable(true)
+            self.buyBtn.title = "Buy Item"
+        end
+    end
     
     if self.amountEntry then
         local text = self.amountEntry:getText()
@@ -201,5 +213,7 @@ function ShopPersonalBrowseUI:close()
     oldClose(self)
     ShopPersonalBrowseUI.instance = nil
 end
+
+
 
 

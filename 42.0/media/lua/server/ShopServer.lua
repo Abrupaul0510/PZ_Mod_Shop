@@ -156,7 +156,9 @@ local function OnClientCommand(module, command, player, args)
                           (command == ProjectShopee.Commands.CheckoutCart) or 
                           (command == ProjectShopee.Commands.DepositMoney) or 
                           (command == ProjectShopee.Commands.TransferMoney) or
-                          (command == ProjectShopee.Commands.BuyFromPersonalShop)
+                          (command == ProjectShopee.Commands.BuyFromPersonalShop) or 
+                          (command == ProjectShopee.Commands.AddItemToPersonalShop) or 
+                          (command == ProjectShopee.Commands.RemoveItemFromPersonalShop)
 
     if isTransaction then
         local username = player:getUsername()
@@ -640,7 +642,11 @@ local function OnClientCommand(module, command, player, args)
         if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
             limit = ProjectShopee.Config.Catalog.Limits[args.item]
         end
-        if amount > limit then return end
+        local currentStock = shop.Stock[args.item] and shop.Stock[args.item].Count or 0
+        if currentStock + amount > limit then
+            sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Stock limit reached! Max " .. tostring(limit), color={r=255, g=0, b=0}})
+            return
+        end
         
         -- Check unique limit
         local uniqueItems = 0
@@ -712,7 +718,11 @@ local function OnClientCommand(module, command, player, args)
         if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
             limit = ProjectShopee.Config.Catalog.Limits[args.item]
         end
+
         if amount > limit then return end
+
+
+
         
         local itemData = shop.Stock[args.item]
         if not itemData or itemData.Count < amount then return end
@@ -922,5 +932,6 @@ local function CleanupActiveCheckouts()
     end
 end
 Events.EveryOneMinute.Add(CleanupActiveCheckouts)
+
 
 

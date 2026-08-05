@@ -107,6 +107,10 @@ function ShopPersonalAddUI:populateList()
 end
 
 function ShopPersonalAddUI:onAdd()
+    if self.actionCooldown and self.actionCooldown > 0 then return end
+    self.actionCooldown = 30
+    self.addBtn:setEnable(false)
+    self.addBtn.title = "Wait..."
     local selectedItem = self.list.items[self.list.selected]
     if not selectedItem or not selectedItem.item then return end
     
@@ -159,6 +163,14 @@ end
 function ShopPersonalAddUI:update()
     ISCollapsableWindow.update(self)
     
+    if self.actionCooldown and self.actionCooldown > 0 then
+        self.actionCooldown = self.actionCooldown - 1
+        if self.actionCooldown <= 0 then
+            self.addBtn:setEnable(true)
+            self.addBtn.title = "List Item"
+        end
+    end
+    
     if self.amountEntry then
         local text = self.amountEntry:getText()
         local scrubbed = text:gsub("[^0-9]", "")
@@ -206,4 +218,6 @@ function ShopPersonalAddUI:new(x, y, width, height, player, pos)
     o.moveWithMouse = true
     return o
 end
+
+
 
