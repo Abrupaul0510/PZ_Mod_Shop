@@ -771,6 +771,13 @@ local function OnClientCommand(module, command, player, args)
         local price = math.floor(tonumber(args.price) or 1)
         if amount <= 0 or price < 0 then return end
         
+        -- Enforce catalog limits
+        local limit = 50
+        if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
+            limit = ProjectShopee.Config.Catalog.Limits[args.item]
+        end
+        if amount > limit then return end
+        
         -- Check unique limit
         local uniqueItems = 0
         for k, v in pairs(shop.Stock) do uniqueItems = uniqueItems + 1 end
@@ -833,6 +840,13 @@ local function OnClientCommand(module, command, player, args)
         
         local amount = math.floor(tonumber(args.amount) or 0)
         if amount <= 0 then return end
+        
+        -- Enforce catalog limits
+        local limit = 50
+        if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
+            limit = ProjectShopee.Config.Catalog.Limits[args.item]
+        end
+        if amount > limit then return end
         
         local itemData = shop.Stock[args.item]
         if not itemData or itemData.Count < amount then return end

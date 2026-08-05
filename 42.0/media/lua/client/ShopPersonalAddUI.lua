@@ -122,6 +122,16 @@ function ShopPersonalAddUI:onAdd()
         self.priceEntry:setText("1")
     end
     
+    local limit = 50
+    if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType] then
+        limit = ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType]
+    end
+    
+    if amount > limit then
+        self.player:Say("I can only list up to " .. tostring(limit) .. " at a time.")
+        return
+    end
+    
     if amount > selectedItem.item.count then
         self.player:Say("I don't have that many to list.")
         return

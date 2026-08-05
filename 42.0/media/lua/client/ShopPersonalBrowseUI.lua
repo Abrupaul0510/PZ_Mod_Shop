@@ -90,6 +90,16 @@ function ShopPersonalBrowseUI:onBuy()
     local amount = tonumber(self.amountEntry:getText())
     if not amount or amount <= 0 then return end
     
+    local limit = 50
+    if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType] then
+        limit = ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType]
+    end
+    
+    if amount > limit then
+        self.player:Say("I can only buy up to " .. tostring(limit) .. " at a time.")
+        return
+    end
+    
     if amount > selectedItem.item.count then
         self.player:Say("They don't have that many in stock.")
         return
