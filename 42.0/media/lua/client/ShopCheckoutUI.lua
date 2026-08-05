@@ -234,6 +234,19 @@ end
 
 function ShopCheckoutUI:onCheckout()
     local player = getPlayer()
+    
+    local primary = player:getPrimaryHandItem()
+    local secondary = player:getSecondaryHandItem()
+    local hasBag = false
+    
+    if primary and primary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    if secondary and secondary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    
+    if not hasBag then
+        player:Say("You need to get a Plastic Bag equipped to checkout")
+        return
+    end
+
     local balance = ProjectShopee.Client.Balance or 0
     
     if self.cartTotal <= 0 then
