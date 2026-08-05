@@ -224,7 +224,10 @@ function ShopCheckoutUI:onRemoveCart()
     
     local itemName = sel.item.name
     if ProjectShopee.Client.Cart[itemName] then
-        ProjectShopee.Client.Cart[itemName] = nil
+        ProjectShopee.Client.Cart[itemName] = ProjectShopee.Client.Cart[itemName] - 1
+        if ProjectShopee.Client.Cart[itemName] <= 0 then
+            ProjectShopee.Client.Cart[itemName] = nil
+        end
         self:refresh()
     end
 end
