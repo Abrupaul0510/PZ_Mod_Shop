@@ -90,7 +90,7 @@ function ShopPersonalBrowseUI:onBuy()
     local amount = tonumber(self.amountEntry:getText())
     if not amount or amount <= 0 then return end
     
-    local limit = 50
+    local limit = 10
     if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType] then
         limit = ProjectShopee.Config.Catalog.Limits[selectedItem.item.itemFullType]
     end

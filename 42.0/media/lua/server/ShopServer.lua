@@ -512,7 +512,7 @@ local function OnClientCommand(module, command, player, args)
         local amount = math.floor(tonumber(args.amount) or 0)
         
         -- Server-side enforcement of limits
-        local limit = 50
+        local limit = 10
         if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[itemName] then
             limit = ProjectShopee.Config.Catalog.Limits[itemName]
         end
@@ -564,7 +564,7 @@ local function OnClientCommand(module, command, player, args)
             local amt = math.floor(tonumber(cartItem.amount) or 0)
             
             -- Server-side enforcement of limits
-            local limit = 50
+            local limit = 10
             if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[cartItem.item] then
                 limit = ProjectShopee.Config.Catalog.Limits[cartItem.item]
             end
@@ -772,7 +772,7 @@ local function OnClientCommand(module, command, player, args)
         if amount <= 0 or price < 0 then return end
         
         -- Enforce catalog limits
-        local limit = 50
+        local limit = 10
         if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
             limit = ProjectShopee.Config.Catalog.Limits[args.item]
         end
@@ -842,7 +842,7 @@ local function OnClientCommand(module, command, player, args)
         if amount <= 0 then return end
         
         -- Enforce catalog limits
-        local limit = 50
+        local limit = 10
         if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[args.item] then
             limit = ProjectShopee.Config.Catalog.Limits[args.item]
         end
