@@ -3,6 +3,8 @@ if not isServer() then return end
 ProjectShopee = ProjectShopee or {}
 ProjectShopee.Server = {}
 ProjectShopee.ActiveCheckouts = {}
+ProjectShopee.ActiveATMs = {}
+ProjectShopee.ActivePersonalShops = {}
 
 local function trim(s)
    return (s:gsub("^%s*(.-)%s*$", "%1"))
@@ -684,6 +686,44 @@ local function OnClientCommand(module, command, player, args)
         local username = player:getUsername()
         if pos and ProjectShopee.ActiveCheckouts[pos] == username then
             ProjectShopee.ActiveCheckouts[pos] = nil
+        end
+        
+    elseif command == ProjectShopee.Commands.RequestOpenATM then
+        local pos = args.pos
+        local username = player:getUsername()
+        if not pos then return end
+        
+        if not ProjectShopee.ActiveATMs[pos] or ProjectShopee.ActiveATMs[pos] == username then
+            ProjectShopee.ActiveATMs[pos] = username
+            sendServerCommand(player, "ProjectShopee", "AllowOpenATM", {pos = pos})
+        else
+            sendServerCommand(player, "ProjectShopee", "DenyOpenATM", {pos = pos, message="Someone is already using this ATM!"})
+        end
+        
+    elseif command == ProjectShopee.Commands.CloseATM then
+        local pos = args.pos
+        local username = player:getUsername()
+        if pos and ProjectShopee.ActiveATMs[pos] == username then
+            ProjectShopee.ActiveATMs[pos] = nil
+        end
+        
+    elseif command == ProjectShopee.Commands.RequestOpenPersonalShop then
+        local pos = args.pos
+        local username = player:getUsername()
+        if not pos then return end
+        
+        if not ProjectShopee.ActivePersonalShops[pos] or ProjectShopee.ActivePersonalShops[pos] == username then
+            ProjectShopee.ActivePersonalShops[pos] = username
+            sendServerCommand(player, "ProjectShopee", "AllowOpenPersonalShop", {pos = pos})
+        else
+            sendServerCommand(player, "ProjectShopee", "DenyOpenPersonalShop", {pos = pos, message="Someone is already browsing this Shop!"})
+        end
+        
+    elseif command == ProjectShopee.Commands.ClosePersonalShop then
+        local pos = args.pos
+        local username = player:getUsername()
+        if pos and ProjectShopee.ActivePersonalShops[pos] == username then
+            ProjectShopee.ActivePersonalShops[pos] = nil
         end
         
     elseif command == ProjectShopee.Commands.CreatePersonalShop then

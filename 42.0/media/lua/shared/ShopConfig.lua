@@ -45,6 +45,10 @@ ProjectShopee.Commands = {
     AdminSetMoney = "ProjectShopee_AdminSetMoney",
     RequestOpenCheckout = "ProjectShopee_RequestOpenCheckout",
     CloseCheckout = "ProjectShopee_CloseCheckout",
+    RequestOpenATM = "ProjectShopee_RequestOpenATM",
+    CloseATM = "ProjectShopee_CloseATM",
+    RequestOpenPersonalShop = "ProjectShopee_RequestOpenPersonalShop",
+    ClosePersonalShop = "ProjectShopee_ClosePersonalShop",
     
     -- Personal Shop Commands
     AdminSetPSWhitelist = "ProjectShopee_AdminSetPSWhitelist",

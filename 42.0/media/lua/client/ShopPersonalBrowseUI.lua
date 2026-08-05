@@ -147,6 +147,7 @@ function ShopPersonalBrowseUI:update()
 end
 
 function ShopPersonalBrowseUI:close()
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.ClosePersonalShop, {pos = self.pos})
     self:removeFromUIManager()
 end
 

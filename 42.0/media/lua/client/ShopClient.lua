@@ -83,11 +83,33 @@ local function OnServerCommand(module, command, args)
             ProjectShopeeCheckoutUI_Instance:bringToTop()
             ProjectShopeeCheckoutUI_Instance:refresh()
         end
-    elseif command == "DenyOpenCheckout" then
+    elseif command == "DenyOpenCheckout" or command == "DenyOpenATM" or command == "DenyOpenPersonalShop" then
         local playerObj = getPlayer()
         if playerObj and args and args.message then
             playerObj:Say(args.message)
         end
+    elseif command == "AllowOpenATM" then
+        local playerObj = getPlayer()
+        if not playerObj then return end
+        local pos = args.pos
+        if not ShopDepositUI then require("ShopDepositUI") end
+        if ProjectShopeeDepositUI_Instance and ProjectShopeeDepositUI_Instance:getIsVisible() then
+            ProjectShopeeDepositUI_Instance:close()
+        end
+        ProjectShopeeDepositUI_Instance = ShopDepositUI:new(50, 50, 400, 400, playerObj, pos)
+        ProjectShopeeDepositUI_Instance:initialise()
+        ProjectShopeeDepositUI_Instance:addToUIManager()
+    elseif command == "AllowOpenPersonalShop" then
+        local playerObj = getPlayer()
+        if not playerObj then return end
+        local pos = args.pos
+        if not ShopPersonalBrowseUI then require("ShopPersonalBrowseUI") end
+        if ProjectShopeePersonalBrowseUI_Instance and ProjectShopeePersonalBrowseUI_Instance:getIsVisible() then
+            ProjectShopeePersonalBrowseUI_Instance:close()
+        end
+        ProjectShopeePersonalBrowseUI_Instance = ShopPersonalBrowseUI:new(0, 0, 500, 500, playerObj, pos)
+        ProjectShopeePersonalBrowseUI_Instance:initialise()
+        ProjectShopeePersonalBrowseUI_Instance:addToUIManager()
     end
 end
 Events.OnServerCommand.Add(OnServerCommand)
@@ -164,10 +186,7 @@ local function OnFillWorldObjectContextMenu(player, context, worldobjects, test)
                 return
             end
             
-            if not ShopDepositUI then require("ShopDepositUI") end
-            local ui = ShopDepositUI:new(50, 50, 400, 400, playerObj, pos)
-            ui:initialise()
-            ui:addToUIManager()
+            sendClientCommand("ProjectShopee", ProjectShopee.Commands.RequestOpenATM, { pos = pos })
         end)
     end
     
@@ -247,17 +266,13 @@ local function OnFillWorldObjectContextMenu(player, context, worldobjects, test)
                 return
             end
             
-            -- Dynamic check against the latest config
             local currentShopData = ProjectShopee.Config.PersonalShops and ProjectShopee.Config.PersonalShops[pos]
             if currentShopData and not currentShopData.IsOpen then
                 playerObj:Say("The Shop is still Closed")
                 return
             end
             
-            if not ShopPersonalBrowseUI then require("ShopPersonalBrowseUI") end
-            local ui = ShopPersonalBrowseUI:new(0, 0, 500, 500, playerObj, pos)
-            ui:initialise()
-            ui:addToUIManager()
+            sendClientCommand("ProjectShopee", ProjectShopee.Commands.RequestOpenPersonalShop, { pos = pos })
         end)
     elseif not isShop and not isCheckout and not isATM and isWhitelisted then
         local hasShop = false

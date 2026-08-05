@@ -219,6 +219,7 @@ function ShopDepositUI:update()
 end
 
 function ShopDepositUI:close()
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.CloseATM, {pos = self.pos})
     self:removeFromUIManager()
 end
 
