@@ -11,25 +11,7 @@ local function trim(s)
 end
 
 local function SaveConfig()
-    if not ProjectShopeeJson then
-        print("Project Shopee: Error - ProjectShopeeJson is not loaded. Cannot save config to JSON.")
-        return
-    end
-
-    local success, jsonStr = pcall(ProjectShopeeJson.encode, ProjectShopee.Config)
-    if not success or not jsonStr then
-        print("Project Shopee: Failed to encode config to JSON. Error: " .. tostring(jsonStr))
-        return
-    end
-
-    local writer = getFileWriter("ProjectShopeeConfig.json", true, false)
-    if not writer then 
-        print("Project Shopee: Failed to get file writer for ProjectShopeeConfig.json")
-        return 
-    end
-    
-    writer:write(jsonStr)
-    writer:close()
+    ModData.transmit("ProjectShopee")
     ProjectShopee.NeedsSave = false
 end
 
@@ -45,43 +27,11 @@ end
 
 ProjectShopee.NeedsSave = false
 
-local function PeriodicSave()
-    if ProjectShopee.NeedsSave then
-        SaveConfig()
-        BroadcastConfig()
-        ProjectShopee.NeedsSave = false
-    end
-end
-Events.EveryOneMinute.Add(PeriodicSave)
-
-local function LoadConfig()
-    if not ProjectShopeeJson then
-        print("Project Shopee: Error - ProjectShopeeJson is not loaded. Cannot load JSON config.")
-        return
-    end
-
+-- Legacy JSON config migration
+local function MigrateJSONConfig()
+    if not ProjectShopeeJson then return false end
     local reader = getFileReader("ProjectShopeeConfig.json", false)
-    if not reader then 
-        -- If JSON doesn't exist, it means either it's the first run, or they are upgrading from the old .txt
-        print("Project Shopee: ProjectShopeeConfig.json not found, attempting to migrate from .txt if exists...")
-        -- Optionally, we could still load the .txt here if we wanted a fallback, but we'll start fresh if not found.
-        
-        ProjectShopee.Config = {
-            Shops = {},
-            Checkouts = {},
-            ATMs = {},
-            PersonalShopWhitelist = {},
-            PersonalShops = {},
-            MoneyRatios = {
-                ["Base.Money"] = 1,
-                ["Base.MoneyBundle"] = 100
-            },
-            Catalog = { Buy = {}, Sell = {}, Limits = {} },
-            BankBalances = {},
-            TransactionLogs = {}
-        }
-        return 
-    end
+    if not reader then return false end
     
     local content = ""
     local line = reader:readLine()
@@ -91,27 +41,55 @@ local function LoadConfig()
     end
     reader:close()
     
-    if content == "" then return end
+    if content == "" then return false end
     
     local success, decoded = pcall(ProjectShopeeJson.decode, content)
     if success and decoded then
-        ProjectShopee.Config = decoded
-        print("Project Shopee: Successfully loaded ProjectShopeeConfig.json")
-    else
-        print("Project Shopee: Error decoding JSON config! Starting fresh. Error: " .. tostring(decoded))
-        ProjectShopee.Config = {
-            Shops = {}, Checkouts = {}, ATMs = {}, PersonalShopWhitelist = {}, PersonalShops = {},
-            MoneyRatios = { ["Base.Money"] = 1, ["Base.MoneyBundle"] = 100 },
-            Catalog = { Buy = {}, Sell = {}, Limits = {} }, BankBalances = {}, TransactionLogs = {}
-        }
+        print("Project Shopee: ModData is empty. Successfully migrated legacy data from ProjectShopeeConfig.json!")
+        return decoded
+    end
+    return false
+end
+
+local function InitializeModData()
+    local modData = ModData.getOrCreate("ProjectShopee")
+    
+    local isNew = true
+    for k, v in pairs(modData) do
+        isNew = false
+        break
     end
     
-    print("Project Shopee: Loaded Config from File!")
+    if isNew then
+        local legacyData = MigrateJSONConfig()
+        if legacyData then
+            for k, v in pairs(legacyData) do
+                modData[k] = v
+            end
+        end
+    end
+    
+    modData.Shops = modData.Shops or {}
+    modData.Checkouts = modData.Checkouts or {}
+    modData.ATMs = modData.ATMs or {}
+    modData.PersonalShopWhitelist = modData.PersonalShopWhitelist or {}
+    modData.PersonalShops = modData.PersonalShops or {}
+    modData.MoneyRatios = modData.MoneyRatios or {
+        ["Base.Money"] = 1,
+        ["Base.MoneyBundle"] = 100
+    }
+    modData.Catalog = modData.Catalog or { Buy = {}, Sell = {}, Limits = {} }
+    modData.BankBalances = modData.BankBalances or {}
+    modData.TransactionLogs = modData.TransactionLogs or {}
+    
+    ProjectShopee.Config = modData
+    print("Project Shopee: ModData Initialized and hooked successfully.")
+    
     for k, v in pairs(ProjectShopee.Config.Shops) do
         print("Project Shopee: Shop loaded at: " .. tostring(k))
     end
 end
-Events.OnInitGlobalModData.Add(LoadConfig)
+Events.OnInitGlobalModData.Add(InitializeModData)
 
 local function SyncPlayerBalance(player)
     local username = player:getUsername()
@@ -935,3 +913,4 @@ local function CleanupActiveCheckouts()
     end
 end
 Events.EveryOneMinute.Add(CleanupActiveCheckouts)
+
