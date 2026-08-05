@@ -30,6 +30,12 @@ local function OnServerCommand(module, command, args)
         if ProjectShopeeAdminUI_Instance and ProjectShopeeAdminUI_Instance:getIsVisible() then
             ProjectShopeeAdminUI_Instance:refresh()
         end
+        if ShopPersonalManageUI and ShopPersonalManageUI.instance and ShopPersonalManageUI.instance:getIsVisible() then
+            ShopPersonalManageUI.instance:populateList()
+        end
+        if ShopPersonalBrowseUI and ShopPersonalBrowseUI.instance and ShopPersonalBrowseUI.instance:getIsVisible() then
+            ShopPersonalBrowseUI.instance:populateList()
+        end
     elseif command == "SyncBalance" then
         ProjectShopee.Client.Balance = args.balance
         if ProjectShopeeUI_Instance and ProjectShopeeUI_Instance:getIsVisible() then

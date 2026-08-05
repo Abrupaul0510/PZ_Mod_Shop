@@ -187,15 +187,7 @@ function ShopPersonalBrowseUI:new(x, y, width, height, player, pos)
     return o
 end
 
-local function OnServerCommand(module, command, args)
-    if module ~= "ProjectShopee" then return end
-    if command == ProjectShopee.Commands.SyncConfig then
-        if ShopPersonalBrowseUI.instance then
-            ShopPersonalBrowseUI.instance:populateList()
-        end
-    end
-end
-Events.OnServerCommand.Add(OnServerCommand)
+
 
 local oldNew = ShopPersonalBrowseUI.new
 function ShopPersonalBrowseUI:new(x, y, width, height, player, pos)
@@ -209,4 +201,5 @@ function ShopPersonalBrowseUI:close()
     oldClose(self)
     ShopPersonalBrowseUI.instance = nil
 end
+
 
