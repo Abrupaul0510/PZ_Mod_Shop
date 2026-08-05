@@ -221,6 +221,18 @@ function ShopUI:onAddToCart()
     end
     
     ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
+    
+    local maxCartSize = 75
+    local currentTotal = 0
+    for _, qty in pairs(ProjectShopee.Client.Cart) do
+        currentTotal = currentTotal + qty
+    end
+    
+    if currentTotal + amount > maxCartSize then
+        player:Say("My cart is full! I can't hold more than " .. maxCartSize .. " items.")
+        return
+    end
+    
     local currentInCart = ProjectShopee.Client.Cart[itemName] or 0
     
     if currentInCart + amount > limit then
