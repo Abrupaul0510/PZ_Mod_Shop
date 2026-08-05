@@ -192,14 +192,26 @@ function ShopUI:sortList(itemsList)
 end
 
 function ShopUI:onAddToCart()
+    local player = getPlayer()
+    
+    local primary = player:getPrimaryHandItem()
+    local secondary = player:getSecondaryHandItem()
+    local hasBag = false
+    
+    if primary and primary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    if secondary and secondary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    
+    if not hasBag then
+        player:Say("You need to get a Plastic Bag equipped")
+        return
+    end
+
     local item = self.buyList.items[self.buyList.selected]
     if not item then return end
     
     local itemName = item.item.name
     local price = ProjectShopee.Config.Catalog.Buy[itemName]
     if not price then return end
-    
-    local player = getPlayer()
     local amount = tonumber(self.buyAmountEntry:getText()) or 1
     if amount < 1 then amount = 1 end
     
