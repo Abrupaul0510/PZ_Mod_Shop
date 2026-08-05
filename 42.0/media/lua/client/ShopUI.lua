@@ -287,13 +287,13 @@ function ShopUI:update()
     if self.buyAmountEntry then
         local text = self.buyAmountEntry:getText()
         local scrubbed = text:gsub("[^0-9]", "")
-        if scrubbed == "" or scrubbed == "0" then scrubbed = "1" end
+
         if text ~= scrubbed then self.buyAmountEntry:setText(scrubbed) end
     end
     if self.removeAmountEntry then
         local text = self.removeAmountEntry:getText()
         local scrubbed = text:gsub("[^0-9]", "")
-        if scrubbed == "" or scrubbed == "0" then scrubbed = "1" end
+
         if text ~= scrubbed then self.removeAmountEntry:setText(scrubbed) end
     end
     

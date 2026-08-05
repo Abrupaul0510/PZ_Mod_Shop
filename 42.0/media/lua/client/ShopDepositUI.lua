@@ -198,13 +198,13 @@ function ShopDepositUI:update()
     if self.amountEntry then
         local text = self.amountEntry:getText()
         local scrubbed = text:gsub("[^0-9]", "")
-        if scrubbed == "" or scrubbed == "0" then scrubbed = "1" end
+
         if text ~= scrubbed then self.amountEntry:setText(scrubbed) end
     end
     if self.transferAmountEntry then
         local text = self.transferAmountEntry:getText()
         local scrubbed = text:gsub("[^0-9]", "")
-        if scrubbed == "" or scrubbed == "0" then scrubbed = "1" end
+
         if text ~= scrubbed then self.transferAmountEntry:setText(scrubbed) end
     end
     
