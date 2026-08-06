@@ -13,7 +13,9 @@ end
 function ShopPersonalBrowseUI:create()
     local fontHgt = getTextManager():getFontHeight(UIFont.Small)
     
-    self.list = ISScrollingListBox:new(10, 25, self.width - 20, self.height - 100)
+    self.personalBanner = getTexture("media/textures/personal_banner.png")
+    
+    self.list = ISScrollingListBox:new(10, 125, self.width - 20, self.height - 200)
     self.list:initialise()
     self.list:instantiate()
     self.list.itemheight = math.max(fontHgt + 10, 32)
@@ -123,6 +125,15 @@ function ShopPersonalBrowseUI:onBuy()
     
     self.player:Say("Buying item...")
     -- Server will sync config which updates UI if we keep it open, or we can close it. We will keep it open.
+end
+
+
+function ShopPersonalBrowseUI:prerender()
+    ISCollapsableWindow.prerender(self)
+    
+    if self.personalBanner then
+        self:drawTextureScaled(self.personalBanner, 0, 20, 500, 100, 1, 1, 1, 1)
+    end
 end
 
 function ShopPersonalBrowseUI:render()

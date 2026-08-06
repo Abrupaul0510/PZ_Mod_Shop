@@ -8,17 +8,18 @@ ShopUI = ISCollapsableWindow:derive("ShopUI")
 
 function ShopUI:initialise()
     ISCollapsableWindow.initialise(self)
+    self.globalBanner = getTexture("media/textures/global_banner.png")
     
     local btnWid = 100
     local btnHgt = 25
     local fontHgt = getTextManager():getFontHeight(UIFont.Small)
     local itemHgt = math.max(fontHgt + 4, 24)
     
-    self.buyCategoryCombo = ISComboBox:new(10, 45, self.width/2 - 15, 20, self, self.onBuyCategoryChange)
+    self.buyCategoryCombo = ISComboBox:new(10, 145, self.width/2 - 15, 20, self, self.onBuyCategoryChange)
     self.buyCategoryCombo:initialise()
     self:addChild(self.buyCategoryCombo)
 
-    self.buyList = ISScrollingListBox:new(10, 70, self.width/2 - 15, self.height - 120)
+    self.buyList = ISScrollingListBox:new(10, 170, self.width/2 - 15, self.height - 220)
     self.buyList:initialise()
     self.buyList:instantiate()
     self.buyList.itemheight = itemHgt
@@ -29,7 +30,7 @@ function ShopUI:initialise()
     self.buyList.drawBorder = true
     self:addChild(self.buyList)
     
-    self.cartList = ISScrollingListBox:new(self.width/2 + 5, 45, self.width/2 - 15, self.height - 95)
+    self.cartList = ISScrollingListBox:new(self.width/2 + 5, 170, self.width/2 - 15, self.height - 220)
     self.cartList:initialise()
     self.cartList:instantiate()
     self.cartList.itemheight = itemHgt
@@ -42,6 +43,8 @@ function ShopUI:initialise()
     
     self.addBtn = ISButton:new(10, self.height - btnHgt - 10, btnWid + 20, btnHgt, "Add to Cart", self, self.onAddToCart)
     self.addBtn:initialise()
+    self.addBtn.backgroundColor = {r=0, g=0.5, b=0, a=1.0}
+    self.addBtn.textColor = {r=1, g=1, b=1, a=1.0}
     self:addChild(self.addBtn)
     
     self.buyAmountEntry = ISTextEntryBox:new("1", 10 + btnWid + 25, self.height - btnHgt - 10, 40, btnHgt)
@@ -82,14 +85,23 @@ function ShopUI:drawCartListItem(y, item, alt)
         if tex then
             self:drawTextureScaledAspect(tex, 4, y+2, 20, 20, 1, 1, 1, 1)
         end
-        self:drawText(tostring(data.amount) .. "x " .. data.itemObj:getDisplayName(), 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
-    else
-        self:drawText(tostring(data.amount) .. "x " .. data.name, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
     end
-    
     local priceStr = "$" .. tostring(data.price * data.amount)
     local priceWid = getTextManager():MeasureStringX(self.font, priceStr)
-    self:drawText(priceStr, self:getWidth() - priceWid - 10, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
+    local itemName = tostring(data.amount) .. "x " .. (data.itemObj and data.itemObj:getDisplayName() or data.name)
+    local maxTextWidth = self:getWidth() - priceWid - 70
+    if getTextManager():MeasureStringX(self.font, itemName) > maxTextWidth then
+        while string.len(itemName) > 0 and getTextManager():MeasureStringX(self.font, itemName .. "...") > maxTextWidth do
+            itemName = string.sub(itemName, 1, string.len(itemName) - 1)
+        end
+        itemName = itemName .. "..."
+    end
+    if data.itemObj then
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
+    else
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
+    end
+    self:drawText(priceStr, self:getWidth() - priceWid - 30, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
 
     return y + item.height;
 end
@@ -107,14 +119,23 @@ function ShopUI:drawCatalogListItem(y, item, alt)
         if tex then
             self:drawTextureScaledAspect(tex, 4, y+2, 20, 20, 1, 1, 1, 1)
         end
-        self:drawText(data.itemObj:getDisplayName(), 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
-    else
-        self:drawText(data.name, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
     end
-    
     local priceStr = "$" .. tostring(data.price)
     local priceWid = getTextManager():MeasureStringX(self.font, priceStr)
-    self:drawText(priceStr, self:getWidth() - priceWid - 10, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
+    local itemName = data.itemObj and data.itemObj:getDisplayName() or data.name
+    local maxTextWidth = self:getWidth() - priceWid - 70
+    if getTextManager():MeasureStringX(self.font, itemName) > maxTextWidth then
+        while string.len(itemName) > 0 and getTextManager():MeasureStringX(self.font, itemName .. "...") > maxTextWidth do
+            itemName = string.sub(itemName, 1, string.len(itemName) - 1)
+        end
+        itemName = itemName .. "..."
+    end
+    if data.itemObj then
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
+    else
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
+    end
+    self:drawText(priceStr, self:getWidth() - priceWid - 30, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
 
     return y + item.height;
 end
@@ -275,33 +296,43 @@ end
 function ShopUI:prerender()
     ISCollapsableWindow.prerender(self)
     
-    local balance = ProjectShopee.Client.Balance or 0
-    local titleText = "Digital Bank Balance: $" .. tostring(balance)
-    self:drawTextCentre(titleText, self.width/2, 12, 0, 1, 0, 1, UIFont.Medium)
+
     
     local shopName = "Shop Catalog"
     if ProjectShopee.Config.Shops and ProjectShopee.Config.Shops[self.pos] and ProjectShopee.Config.Shops[self.pos].Name then
         shopName = ProjectShopee.Config.Shops[self.pos].Name
     end
     
-    self:drawText(shopName, 10, 30, 1, 1, 1, 1, UIFont.Small)
-    self:drawText("Your Cart", self.width/2 + 5, 30, 1, 1, 1, 1, UIFont.Small)
+    if self.globalBanner then
+        self:drawTextureScaled(self.globalBanner, 0, 20, 600, 100, 1, 1, 1, 1)
+    end
+    
+    self:drawText(shopName, 10, 130, 1, 1, 1, 1, UIFont.Small)
+    self:drawText("Your Cart", self.width/2 + 5, 130, 1, 1, 1, 1, UIFont.Small)
+    
+    local balance = ProjectShopee.Client.Balance or 0
+    self:drawText("Balance: $" .. tostring(balance), self.width/2 + 5, 150, 0.2, 0.9, 0.2, 1, UIFont.Small)
 end
 
 function ShopUI:render()
     ISCollapsableWindow.render(self)
     
-    local balance = ProjectShopee.Client.Balance or 0
-    local titleText = "Digital Bank Balance: $" .. tostring(balance)
-    self:drawTextCentre(titleText, self.width/2, 12, 0, 1, 0, 1, UIFont.Medium)
+
     
     local shopName = "Shop Catalog"
     if ProjectShopee.Config.Shops and ProjectShopee.Config.Shops[self.pos] and ProjectShopee.Config.Shops[self.pos].Name then
         shopName = ProjectShopee.Config.Shops[self.pos].Name
     end
     
-    self:drawText(shopName, 10, 30, 1, 1, 1, 1, UIFont.Small)
-    self:drawText("Your Cart", self.width/2 + 5, 30, 1, 1, 1, 1, UIFont.Small)
+    if self.globalBanner then
+        self:drawTextureScaled(self.globalBanner, 0, 20, 600, 100, 1, 1, 1, 1)
+    end
+    
+    self:drawText(shopName, 10, 130, 1, 1, 1, 1, UIFont.Small)
+    self:drawText("Your Cart", self.width/2 + 5, 130, 1, 1, 1, 1, UIFont.Small)
+    
+    local balance = ProjectShopee.Client.Balance or 0
+    self:drawText("Balance: $" .. tostring(balance), self.width/2 + 5, 150, 0.2, 0.9, 0.2, 1, UIFont.Small)
 end
 
 function ShopUI:update()

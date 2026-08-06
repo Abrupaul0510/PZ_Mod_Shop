@@ -3,6 +3,7 @@ require "ISUI/ISCollapsableWindow"
 require "ISUI/ISScrollingListBox"
 require "ISUI/ISTextEntryBox"
 require "ISUI/ISButton"
+require "ISUI/ISComboBox"
 
 ShopAdminUI = ISCollapsableWindow:derive("ShopAdminUI")
 
@@ -13,11 +14,15 @@ function ShopAdminUI:initialise()
     local itemHgt = math.max(fontHgt + 4, 24)
     
     -- LEFT PANEL: MASTER LIST
-    self.searchEntry = ISTextEntryBox:new("", 10, 30, 380, 24)
+    self.searchEntry = ISTextEntryBox:new("", 10, 30, 180, 24)
     self.searchEntry:initialise()
     self.searchEntry:instantiate()
     self.searchEntry.onTextChange = function(box) self:populateMasterList() end
     self:addChild(self.searchEntry)
+    
+    self.categoryCombo = ISComboBox:new(200, 30, 190, 24, self, self.onCategoryChange)
+    self.categoryCombo:initialise()
+    self:addChild(self.categoryCombo)
     
     self.masterList = ISScrollingListBox:new(10, 60, 380, self.height - 110)
     self.masterList:initialise()
@@ -48,7 +53,7 @@ function ShopAdminUI:initialise()
     self.buyPriceEntry:setOnlyNumbers(true)
     self:addChild(self.buyPriceEntry)
     
-    self.buyLimitEntry = ISTextEntryBox:new("50", 465, 220, 30, 24)
+    self.buyLimitEntry = ISTextEntryBox:new("10", 465, 220, 30, 24)
     self.buyLimitEntry:initialise()
     self.buyLimitEntry:instantiate()
     self.buyLimitEntry:setOnlyNumbers(true)
@@ -108,6 +113,18 @@ function ShopAdminUI:initialise()
     -- Sort alphabetically by display name
     table.sort(self.allItems, function(a,b) return a:getDisplayName() < b:getDisplayName() end)
     
+    local catMap = {["All"] = true}
+    for _, item in ipairs(self.allItems) do
+        local cat = item:getDisplayCategory() or "Other"
+        catMap[cat] = true
+    end
+    local sortedCats = {}
+    for c, _ in pairs(catMap) do table.insert(sortedCats, c) end
+    table.sort(sortedCats)
+    for _, c in ipairs(sortedCats) do
+        self.categoryCombo:addOption(c)
+    end
+    
     self.catalogData = { Buy = {}, Sell = {}, Limits = {} }
     if ProjectShopee and ProjectShopee.Config and ProjectShopee.Config.Catalog then
         if ProjectShopee.Config.Catalog.Buy then
@@ -128,21 +145,32 @@ end
 function ShopAdminUI:populateMasterList()
     self.masterList:clear()
     local searchTxt = string.lower(self.searchEntry:getInternalText() or "")
+    local selCat = self.categoryCombo.options[self.categoryCombo.selected]
+    if not selCat then selCat = "All" end
     
     for _, item in ipairs(self.allItems) do
         local name = string.lower(item:getDisplayName())
         local fName = string.lower(item:getFullName())
-        if searchTxt == "" or string.find(name, searchTxt) or string.find(fName, searchTxt) then
+        local cat = item:getDisplayCategory() or "Other"
+        
+        local matchCat = (selCat == "All" or cat == selCat)
+        local matchSearch = (searchTxt == "" or string.find(name, searchTxt) or string.find(fName, searchTxt))
+        
+        if matchCat and matchSearch then
             self.masterList:addItem(item:getFullName(), item)
         end
     end
+end
+
+function ShopAdminUI:onCategoryChange()
+    self:populateMasterList()
 end
 
 function ShopAdminUI:populateCatalogLists()
     self.buyList:clear()
     for itemName, price in pairs(self.catalogData.Buy) do
         local itemObj = getScriptManager():getItem(itemName)
-        local limit = self.catalogData.Limits[itemName] or 50
+        local limit = self.catalogData.Limits[itemName] or 10
         self.buyList:addItem(itemName, {name=itemName, price=price, itemObj=itemObj, limit=limit})
     end
     -- Zomboid ISScrollingListBox doesn't have a reliable sort method by default if items aren't perfectly structured,

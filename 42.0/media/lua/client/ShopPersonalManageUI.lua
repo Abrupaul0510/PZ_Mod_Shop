@@ -14,19 +14,21 @@ end
 function ShopPersonalManageUI:create()
     local fontHgt = getTextManager():getFontHeight(UIFont.Small)
     
-    self.collectBtn = ISButton:new(10, 25, 180, 25, "Collect Earnings", self, self.onCollect)
+    self.personalBanner = getTexture("media/textures/personal_banner.png")
+    
+    self.collectBtn = ISButton:new(10, 125, 180, 25, "Collect Earnings", self, self.onCollect)
     self.collectBtn:initialise()
     self:addChild(self.collectBtn)
     
-    self.renameBtn = ISButton:new(200, 25, 100, 25, "Rename Shop", self, self.onRename)
+    self.renameBtn = ISButton:new(200, 125, 100, 25, "Rename Shop", self, self.onRename)
     self.renameBtn:initialise()
     self:addChild(self.renameBtn)
     
-    self.addBtn = ISButton:new(self.width - 160, 25, 150, 25, "List New Item", self, self.onAddItem)
+    self.addBtn = ISButton:new(self.width - 160, 125, 150, 25, "List New Item", self, self.onAddItem)
     self.addBtn:initialise()
     self:addChild(self.addBtn)
     
-    self.list = ISScrollingListBox:new(10, 60, self.width - 20, self.height - 110)
+    self.list = ISScrollingListBox:new(10, 160, self.width - 20, self.height - 210)
     self.list:initialise()
     self.list:instantiate()
     self.list.itemheight = math.max(fontHgt + 10, 32)
@@ -168,6 +170,15 @@ function ShopPersonalManageUI:onAddItem()
     local ui = ShopPersonalAddUI:new(0, 0, 400, 500, self.player, self.pos)
     ui:initialise()
     ui:addToUIManager()
+end
+
+
+function ShopPersonalManageUI:prerender()
+    ISCollapsableWindow.prerender(self)
+    
+    if self.personalBanner then
+        self:drawTextureScaled(self.personalBanner, 0, 20, 500, 100, 1, 1, 1, 1)
+    end
 end
 
 function ShopPersonalManageUI:render()

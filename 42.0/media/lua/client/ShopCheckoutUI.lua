@@ -3,11 +3,14 @@ require "ISUI/ISCollapsableWindow"
 require "ISUI/ISScrollingListBox"
 require "ISUI/ISButton"
 require "ISUI/ISComboBox"
+require "ISUI/ISTextEntryBox"
 
 ShopCheckoutUI = ISCollapsableWindow:derive("ShopCheckoutUI")
 
 function ShopCheckoutUI:initialise()
     ISCollapsableWindow.initialise(self)
+    self.cartBanner = getTexture("media/textures/cart_banner.png")
+    self.sellBanner = getTexture("media/textures/sell_banner.png")
     
     local btnWid = 120
     local btnHgt = 25
@@ -15,7 +18,7 @@ function ShopCheckoutUI:initialise()
     local itemHgt = math.max(fontHgt + 4, 24)
     
     -- LEFT PANEL: CART
-    self.cartList = ISScrollingListBox:new(10, 45, self.width/2 - 15, self.height - 120)
+    self.cartList = ISScrollingListBox:new(10, 170, self.width/2 - 15, self.height - 220)
     self.cartList:initialise()
     self.cartList:instantiate()
     self.cartList.itemheight = itemHgt
@@ -41,16 +44,16 @@ function ShopCheckoutUI:initialise()
     self:addChild(self.checkoutBtn)
     
     -- RIGHT PANEL: SELL
-    self.sellCategoryCombo = ISComboBox:new(self.width/2 + 5, 45, (self.width/2 - 20)/2, 20, self, self.onSellCategoryChange)
+    self.sellCategoryCombo = ISComboBox:new(self.width/2 + 5, 145, (self.width/2 - 20)/2, 20, self, self.onSellCategoryChange)
     self.sellCategoryCombo:initialise()
     self:addChild(self.sellCategoryCombo)
     
-    self.sellSearchEntry = ISTextEntryBox:new("", self.width/2 + 5 + (self.width/2 - 20)/2 + 5, 45, (self.width/2 - 20)/2, 20)
+    self.sellSearchEntry = ISTextEntryBox:new("", self.width/2 + 5 + (self.width/2 - 20)/2 + 5, 145, (self.width/2 - 20)/2, 20)
     self.sellSearchEntry:initialise()
     self.sellSearchEntry:instantiate()
     self:addChild(self.sellSearchEntry)
     
-    self.sellList = ISScrollingListBox:new(self.width/2 + 5, 70, self.width/2 - 15, self.height - 120)
+    self.sellList = ISScrollingListBox:new(self.width/2 + 5, 170, self.width/2 - 15, self.height - 220)
     self.sellList:initialise()
     self.sellList:instantiate()
     self.sellList.itemheight = itemHgt
@@ -61,16 +64,11 @@ function ShopCheckoutUI:initialise()
     self.sellList.drawBorder = true
     self:addChild(self.sellList)
     
-    self.sellBtn = ISButton:new(self.width/2 + 5, self.height - btnHgt - 10, 80, btnHgt, "Sell", self, self.onSell)
-    self.sellBtn:initialise()
-    self:addChild(self.sellBtn)
-    
-    self.sellAmountEntry = ISTextEntryBox:new("1", self.width/2 + 5 + 85, self.height - btnHgt - 10, 40, btnHgt)
-    self.sellAmountEntry:initialise()
-    self.sellAmountEntry:instantiate()
-    self.sellAmountEntry:setOnlyNumbers(true)
-    self.sellAmountEntry:setMaxTextLength(6)
-    self:addChild(self.sellAmountEntry)
+    self.openSellUIBtn = ISButton:new(self.width/2 + 5, self.height - btnHgt - 10, self.width/2 - 15, btnHgt, "Scan Inventory to Sell", self, self.onOpenSellUI)
+    self.openSellUIBtn:initialise()
+    self.openSellUIBtn.backgroundColor = {r=0.2, g=0.2, b=0.8, a=1.0}
+    self.openSellUIBtn.textColor = {r=1, g=1, b=1, a=1.0}
+    self:addChild(self.openSellUIBtn)
     
     self:refresh()
 end
@@ -88,14 +86,23 @@ function ShopCheckoutUI:drawCartListItem(y, item, alt)
         if tex then
             self:drawTextureScaledAspect(tex, 4, y+2, 20, 20, 1, 1, 1, 1)
         end
-        self:drawText(tostring(data.amount) .. "x " .. data.itemObj:getDisplayName(), 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
-    else
-        self:drawText(tostring(data.amount) .. "x " .. data.name, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
     end
-    
     local priceStr = "$" .. tostring(data.price * data.amount)
     local priceWid = getTextManager():MeasureStringX(self.font, priceStr)
-    self:drawText(priceStr, self:getWidth() - priceWid - 10, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
+    local itemName = tostring(data.amount) .. "x " .. (data.itemObj and data.itemObj:getDisplayName() or data.name)
+    local maxTextWidth = self:getWidth() - priceWid - 70
+    if getTextManager():MeasureStringX(self.font, itemName) > maxTextWidth then
+        while string.len(itemName) > 0 and getTextManager():MeasureStringX(self.font, itemName .. "...") > maxTextWidth do
+            itemName = string.sub(itemName, 1, string.len(itemName) - 1)
+        end
+        itemName = itemName .. "..."
+    end
+    if data.itemObj then
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
+    else
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
+    end
+    self:drawText(priceStr, self:getWidth() - priceWid - 30, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
 
     return y + item.height;
 end
@@ -113,14 +120,23 @@ function ShopCheckoutUI:drawCatalogListItem(y, item, alt)
         if tex then
             self:drawTextureScaledAspect(tex, 4, y+2, 20, 20, 1, 1, 1, 1)
         end
-        self:drawText(data.itemObj:getDisplayName(), 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
-    else
-        self:drawText(data.name, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
     end
-    
     local priceStr = "$" .. tostring(data.price)
     local priceWid = getTextManager():MeasureStringX(self.font, priceStr)
-    self:drawText(priceStr, self:getWidth() - priceWid - 10, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
+    local itemName = data.itemObj and data.itemObj:getDisplayName() or data.name
+    local maxTextWidth = self:getWidth() - priceWid - 70
+    if getTextManager():MeasureStringX(self.font, itemName) > maxTextWidth then
+        while string.len(itemName) > 0 and getTextManager():MeasureStringX(self.font, itemName .. "...") > maxTextWidth do
+            itemName = string.sub(itemName, 1, string.len(itemName) - 1)
+        end
+        itemName = itemName .. "..."
+    end
+    if data.itemObj then
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 1, 1, a, self.font);
+    else
+        self:drawText(itemName, 30, y + (item.height - self.fontHgt)/2, 1, 0.3, 0.3, a, self.font);
+    end
+    self:drawText(priceStr, self:getWidth() - priceWid - 30, y + (item.height - self.fontHgt)/2, 0.2, 1, 0.2, a, self.font);
 
     return y + item.height;
 end
@@ -138,7 +154,6 @@ function ShopCheckoutUI:refresh()
             self.cartTotal = self.cartTotal + (price * amount)
             self.cartList:addItem(itemName, {name=itemName, amount=amount, price=price, itemObj=itemObj})
         else
-            -- Item no longer in catalog
             ProjectShopee.Client.Cart[itemName] = nil
         end
     end
@@ -184,15 +199,11 @@ function ShopCheckoutUI:populateSellList()
     local searchText = self.sellSearchEntry and self.sellSearchEntry:getText() or ""
     searchText = string.lower(searchText)
     
-    print("Project Shopee Debug: populating Sell List. Category=" .. tostring(selectedSellCat) .. " Search=" .. tostring(searchText))
-    
     for _, item in ipairs(self.masterSellList) do
-        print("Project Shopee Debug: Checking item: " .. tostring(item.name) .. " Cat: " .. tostring(item.category))
         if selectedSellCat == "All Categories" or item.category == selectedSellCat then
             local dispName = item.itemObj and item.itemObj:getDisplayName() or item.name
             if searchText == "" or string.find(string.lower(dispName), searchText, 1, true) then
                 self.sellList:addItem(item.name, item)
-                print("Project Shopee Debug: Added item: " .. tostring(item.name))
             end
         end
     end
@@ -265,7 +276,6 @@ function ShopCheckoutUI:onCheckout()
         
         sendClientCommand("ProjectShopee", ProjectShopee.Commands.CheckoutCart, {cart=cartPayload, pos=self.pos})
         
-        -- Clear cart after successful checkout request
         ProjectShopee.Client.Cart = {}
         self:refresh()
     else
@@ -273,43 +283,43 @@ function ShopCheckoutUI:onCheckout()
     end
 end
 
-function ShopCheckoutUI:onSell()
-    if self.sellCooldown and self.sellCooldown > 0 then return end
-    
-    local item = self.sellList.items[self.sellList.selected]
-    if not item then return end
-    
-    local player = getPlayer()
-    local inv = player:getInventory()
-    local count = inv:getCountType(item.item.name)
-    
-    local amount = tonumber(self.sellAmountEntry:getText())
-    if not amount or amount < 1 then
-        amount = 1
-        self.sellAmountEntry:setText("1")
-    end
-    
-    if count >= amount then
-        self.sellCooldown = 30
-        self.sellBtn:setEnable(false)
-        self.sellBtn.title = "Wait..."
-        sendClientCommand("ProjectShopee", ProjectShopee.Commands.SellItem, {item=item.item.name, amount=amount, pos=self.pos})
+
+
+function ShopCheckoutUI:onOpenSellUI()
+    if not ShopSellUI then require("ShopSellUI") end
+    if not ProjectShopeeSellUI_Instance then
+        ProjectShopeeSellUI_Instance = ShopSellUI:new(50, 50, 400, 450, self.player, self.pos)
+        ProjectShopeeSellUI_Instance:initialise()
+        ProjectShopeeSellUI_Instance:addToUIManager()
     else
-        player:Say("I don't have enough of this item to sell.")
+        ProjectShopeeSellUI_Instance.pos = self.pos
+        ProjectShopeeSellUI_Instance:setVisible(true)
+        ProjectShopeeSellUI_Instance:addToUIManager()
+        ProjectShopeeSellUI_Instance:bringToTop()
+        ProjectShopeeSellUI_Instance:populateList()
     end
 end
 
-function ShopCheckoutUI:render()
-    ISCollapsableWindow.render(self)
+function ShopCheckoutUI:prerender()
+    ISCollapsableWindow.prerender(self)
+    
+    if self.cartBanner then
+        self:drawTextureScaled(self.cartBanner, 0, 20, 300, 100, 1, 1, 1, 1)
+    end
+    if self.sellBanner then
+        self:drawTextureScaled(self.sellBanner, 300, 20, 300, 100, 1, 1, 1, 1)
+    end
+    
+    self:drawText("Checkout Cart", 10, 130, 1, 1, 1, 1, UIFont.Small)
+    self:drawText("Sell to Kiwe", self.width/2 + 5, 130, 1, 1, 1, 1, UIFont.Small)
     
     local balance = ProjectShopee.Client.Balance or 0
-    local titleText = "Digital Bank Balance: $" .. tostring(balance)
-    self:drawTextCentre(titleText, self.width/2, 12, 0, 1, 0, 1, UIFont.Medium)
+    self:drawText("Balance: $" .. tostring(balance), 10, 150, 0.2, 0.9, 0.2, 1, UIFont.Small)
     
-    local totalText = "Cart Total: $" .. tostring(self.cartTotal or 0)
-    self:drawText(totalText, 10, 30, 0, 1, 0, 1, UIFont.Small)
-    
-    self:drawText("Sell Items", self.width/2 + 5, 30, 1, 1, 1, 1, UIFont.Small)
+    local cartTotal = self.cartTotal or 0
+    local totalText = "Total: $" .. tostring(cartTotal)
+    local tw = getTextManager():MeasureStringX(UIFont.Small, totalText)
+    self:drawText(totalText, self.width/2 - 5 - tw, 150, 0.9, 0.2, 0.2, 1, UIFont.Small)
 end
 
 function ShopCheckoutUI:update()
@@ -323,20 +333,7 @@ function ShopCheckoutUI:update()
         end
     end
     
-    if self.sellAmountEntry then
-        local text = self.sellAmountEntry:getText()
-        local scrubbed = text:gsub("[^0-9]", "")
 
-        if text ~= scrubbed then self.sellAmountEntry:setText(scrubbed) end
-    end
-    
-    if self.sellCooldown and self.sellCooldown > 0 then
-        self.sellCooldown = self.sellCooldown - 1
-        if self.sellCooldown <= 0 then
-            self.sellBtn:setEnable(true)
-            self.sellBtn.title = "SELL"
-        end
-    end
     
     if not self:getIsVisible() then return end
     
@@ -352,17 +349,20 @@ end
 
 function ShopCheckoutUI:close()
     ISCollapsableWindow.close(self)
+    if ProjectShopeeSellUI_Instance and ProjectShopeeSellUI_Instance:getIsVisible() then
+        ProjectShopeeSellUI_Instance:close()
+    end
     sendClientCommand("ProjectShopee", ProjectShopee.Commands.CloseCheckout, { pos = self.pos })
 end
 
 function ShopCheckoutUI:new(x, y, width, height, player, pos)
     local o = {}
-    x = getCore():getScreenWidth() - width - 50
+    x = getCore():getScreenWidth() - 600 - 50
     y = getCore():getScreenHeight() / 2 - (height / 2)
     o = ISCollapsableWindow:new(x, y, 600, 500)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Checkout Counter Test"
+    o.title = "Checkout Counter"
     o.resizable = false
     o.pin = true
     o.isCollapsed = false
@@ -373,4 +373,3 @@ function ShopCheckoutUI:new(x, y, width, height, player, pos)
     o.pos = pos
     return o
 end
-

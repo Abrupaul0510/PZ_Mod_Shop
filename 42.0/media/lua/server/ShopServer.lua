@@ -138,7 +138,8 @@ local function OnClientCommand(module, command, player, args)
         [ProjectShopee.Commands.CollectPSEarnings] = true,
         [ProjectShopee.Commands.RequestOpenCheckout] = true,
         [ProjectShopee.Commands.RequestOpenATM] = true,
-        [ProjectShopee.Commands.RequestOpenPersonalShop] = true
+        [ProjectShopee.Commands.RequestOpenPersonalShop] = true,
+          [ProjectShopee.Commands.RequestOpenPersonalShopManage] = true
     }
     
     if requireProximity[command] then
@@ -894,7 +895,7 @@ local function OnClientCommand(module, command, player, args)
 end
 Events.OnClientCommand.Add(OnClientCommand)
 
-local function CleanupActiveCheckouts()
+local function CleanupActiveUIs()
     local onlinePlayers = getOnlinePlayers()
     local onlineNames = {}
     if onlinePlayers then
@@ -906,30 +907,36 @@ local function CleanupActiveCheckouts()
         end
     end
     
-    for pos, username in pairs(ProjectShopee.ActiveCheckouts) do
-        local p = onlineNames[username]
-        if not p then
-            -- Player disconnected
-            ProjectShopee.ActiveCheckouts[pos] = nil
-        else
-            -- Check distance
-            local parts = {}
-            for part in string.gmatch(pos, "([^,]+)") do table.insert(parts, tonumber(part)) end
-            if #parts == 3 then
-                local dx = p:getX() - parts[1]
-                local dy = p:getY() - parts[2]
-                local dz = p:getZ() - parts[3]
-                local dist = math.sqrt(dx*dx + dy*dy)
-                if dist > 5 or dz ~= 0 then
-                    ProjectShopee.ActiveCheckouts[pos] = nil
-                end
+    local function cleanupTable(activeTable)
+        for pos, username in pairs(activeTable) do
+            local p = onlineNames[username]
+            if not p then
+                -- Player disconnected
+                activeTable[pos] = nil
             else
-                ProjectShopee.ActiveCheckouts[pos] = nil
+                -- Check distance
+                local parts = {}
+                for part in string.gmatch(pos, "([^,]+)") do table.insert(parts, tonumber(part)) end
+                if #parts == 3 then
+                    local dx = p:getX() - parts[1]
+                    local dy = p:getY() - parts[2]
+                    local dz = p:getZ() - parts[3]
+                    local dist = math.sqrt(dx*dx + dy*dy)
+                    if dist > 5 or dz ~= 0 then
+                        activeTable[pos] = nil
+                    end
+                else
+                    activeTable[pos] = nil
+                end
             end
         end
     end
+    
+    cleanupTable(ProjectShopee.ActiveCheckouts)
+    cleanupTable(ProjectShopee.ActiveATMs)
+    cleanupTable(ProjectShopee.ActivePersonalShops)
 end
-Events.EveryOneMinute.Add(CleanupActiveCheckouts)
+Events.EveryOneMinute.Add(CleanupActiveUIs)
 
 
 
