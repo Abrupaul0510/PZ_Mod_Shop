@@ -145,23 +145,27 @@ function ShopCheckoutUI:refresh()
     -- Cart List
     self.cartList:clear()
     self.cartTotal = 0
-    ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
+    ProjectShopee.Client.Carts = ProjectShopee.Client.Carts or { Store1={}, Store2={} }
+    local cartData = ProjectShopee.Client.Carts[self.storeID] or {}
+    ProjectShopee.Client.Carts[self.storeID] = cartData
     
-    for itemName, amount in pairs(ProjectShopee.Client.Cart) do
-        local price = ProjectShopee.Config.Catalog.Buy[itemName]
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
+    
+    for itemName, amount in pairs(cartData) do
+        local price = catalog.Buy[itemName]
         if price then
             local itemObj = getScriptManager():getItem(itemName)
             self.cartTotal = self.cartTotal + (price * amount)
             self.cartList:addItem(itemName, {name=itemName, amount=amount, price=price, itemObj=itemObj})
         else
-            ProjectShopee.Client.Cart[itemName] = nil
+            cartData[itemName] = nil
         end
     end
     
     -- Sell List
     self.masterSellList = {}
     local sellCategories = { ["All Categories"] = true }
-    for itemName, price in pairs(ProjectShopee.Config.Catalog.Sell) do
+    for itemName, price in pairs(catalog.Sell or {}) do
         local itemObj = getScriptManager():getItem(itemName)
         local cat = itemObj and itemObj:getDisplayCategory() or "Unknown"
         sellCategories[cat] = true
@@ -225,7 +229,9 @@ function ShopCheckoutUI:sortList(itemsList)
 end
 
 function ShopCheckoutUI:onClearCart()
-    ProjectShopee.Client.Cart = {}
+    if ProjectShopee.Client.Carts then
+        ProjectShopee.Client.Carts[self.storeID] = {}
+    end
     self:refresh()
 end
 
@@ -234,10 +240,11 @@ function ShopCheckoutUI:onRemoveCart()
     if not sel then return end
     
     local itemName = sel.item.name
-    if ProjectShopee.Client.Cart[itemName] then
-        ProjectShopee.Client.Cart[itemName] = ProjectShopee.Client.Cart[itemName] - 1
-        if ProjectShopee.Client.Cart[itemName] <= 0 then
-            ProjectShopee.Client.Cart[itemName] = nil
+    local cartData = ProjectShopee.Client.Carts and ProjectShopee.Client.Carts[self.storeID]
+    if cartData and cartData[itemName] then
+        cartData[itemName] = cartData[itemName] - 1
+        if cartData[itemName] <= 0 then
+            cartData[itemName] = nil
         end
         self:refresh()
     end
@@ -250,8 +257,8 @@ function ShopCheckoutUI:onCheckout()
     local secondary = player:getSecondaryHandItem()
     local hasBag = false
     
-    if primary and primary:getFullType() == "Base.Plasticbag" then hasBag = true end
-    if secondary and secondary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    if primary and string.find(string.lower(primary:getName()), "plastic bag") then hasBag = true end
+    if secondary and string.find(string.lower(secondary:getName()), "plastic bag") then hasBag = true end
     
     if not hasBag then
         player:Say("You need to get a Plastic Bag equipped to checkout")
@@ -267,16 +274,18 @@ function ShopCheckoutUI:onCheckout()
     
     if balance >= self.cartTotal then
         local cartPayload = {}
-        for itemName, amount in pairs(ProjectShopee.Client.Cart) do
-            local price = ProjectShopee.Config.Catalog.Buy[itemName]
+        local cartData = ProjectShopee.Client.Carts[self.storeID] or {}
+        local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
+        for itemName, amount in pairs(cartData) do
+            local price = catalog.Buy[itemName]
             if price then
                 table.insert(cartPayload, {item=itemName, amount=amount, price=price})
             end
         end
         
-        sendClientCommand("ProjectShopee", ProjectShopee.Commands.CheckoutCart, {cart=cartPayload, pos=self.pos})
+        sendClientCommand("ProjectShopee", ProjectShopee.Commands.CheckoutCart, {cart=cartPayload, pos=self.pos, storeID=self.storeID})
         
-        ProjectShopee.Client.Cart = {}
+        ProjectShopee.Client.Carts[self.storeID] = {}
         self:refresh()
     else
         player:Say("I don't have enough money in the bank. Total is $" .. tostring(self.cartTotal))
@@ -288,11 +297,12 @@ end
 function ShopCheckoutUI:onOpenSellUI()
     if not ShopSellUI then require("ShopSellUI") end
     if not ProjectShopeeSellUI_Instance then
-        ProjectShopeeSellUI_Instance = ShopSellUI:new(50, 50, 400, 450, self.player, self.pos)
+        ProjectShopeeSellUI_Instance = ShopSellUI:new(50, 50, 400, 450, self.player, self.pos, self.storeID)
         ProjectShopeeSellUI_Instance:initialise()
         ProjectShopeeSellUI_Instance:addToUIManager()
     else
         ProjectShopeeSellUI_Instance.pos = self.pos
+        ProjectShopeeSellUI_Instance.storeID = self.storeID
         ProjectShopeeSellUI_Instance:setVisible(true)
         ProjectShopeeSellUI_Instance:addToUIManager()
         ProjectShopeeSellUI_Instance:bringToTop()
@@ -355,14 +365,15 @@ function ShopCheckoutUI:close()
     sendClientCommand("ProjectShopee", ProjectShopee.Commands.CloseCheckout, { pos = self.pos })
 end
 
-function ShopCheckoutUI:new(x, y, width, height, player, pos)
+function ShopCheckoutUI:new(x, y, width, height, player, pos, storeID)
     local o = {}
     x = getCore():getScreenWidth() - 600 - 50
     y = getCore():getScreenHeight() / 2 - (height / 2)
     o = ISCollapsableWindow:new(x, y, 600, 500)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Checkout Counter"
+    o.storeID = storeID or "Store1"
+    o.title = "Checkout Counter (" .. o.storeID .. ")"
     o.resizable = false
     o.pin = true
     o.isCollapsed = false

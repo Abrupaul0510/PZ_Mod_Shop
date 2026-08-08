@@ -24,6 +24,16 @@ local function BroadcastConfig()
     end
 end
 
+local function BroadcastSafeZone(owner, x, y, z)
+    local players = getOnlinePlayers()
+    if players then
+        for i=0, players:size()-1 do
+            local p = players:get(i)
+            sendServerCommand(p, "ProjectShopee", "CreateSafeZone", { owner = owner, x = x, y = y, z = z })
+        end
+    end
+end
+
 ProjectShopee.NeedsSave = false
 
 -- Legacy JSON config migration
@@ -71,6 +81,7 @@ local function InitializeModData()
     modData.Shops = modData.Shops or {}
     modData.Checkouts = modData.Checkouts or {}
     modData.ATMs = modData.ATMs or {}
+    modData.AnimalShops = modData.AnimalShops or {}
     modData.PersonalShopWhitelist = modData.PersonalShopWhitelist or {}
     modData.PersonalShops = modData.PersonalShops or {}
     modData.MoneyRatios = modData.MoneyRatios or {
@@ -82,6 +93,20 @@ local function InitializeModData()
     modData.TransactionLogs = modData.TransactionLogs or {}
     
     ProjectShopee.Config = modData
+    
+    if not ProjectShopee.Config.Catalogs then
+        ProjectShopee.Config.Catalogs = {}
+    end
+    if ProjectShopee.Config.Catalog and not ProjectShopee.Config.Catalogs.Store1 then
+        ProjectShopee.Config.Catalogs.Store1 = ProjectShopee.Config.Catalog
+    elseif not ProjectShopee.Config.Catalogs.Store1 then
+        ProjectShopee.Config.Catalogs.Store1 = { Buy = {}, Sell = {}, Limits = {} }
+    end
+    if not ProjectShopee.Config.Catalogs.Store2 then
+        ProjectShopee.Config.Catalogs.Store2 = { Buy = {}, Sell = {}, Limits = {} }
+    end
+    ProjectShopee.Config.Catalog = ProjectShopee.Config.Catalogs.Store1
+    
     print("Project Shopee: ModData Initialized and hooked successfully.")
     
     for k, v in pairs(ProjectShopee.Config.Shops) do
@@ -121,6 +146,30 @@ local function VerifyDistance(player, posString)
         end
     end
     return false
+end
+
+local function VerifyConfig()
+    if not ProjectShopee.Config.Catalogs then ProjectShopee.Config.Catalogs = {} end
+    if ProjectShopee.Config.Catalog and not ProjectShopee.Config.Catalogs.Store1 then
+        ProjectShopee.Config.Catalogs.Store1 = ProjectShopee.Config.Catalog
+    elseif not ProjectShopee.Config.Catalogs.Store1 then
+        ProjectShopee.Config.Catalogs.Store1 = { Buy = {}, Sell = {}, Limits = {} }
+    end
+    if not ProjectShopee.Config.Catalogs.Store2 then
+        ProjectShopee.Config.Catalogs.Store2 = { Buy = {}, Sell = {}, Limits = {} }
+    end
+    ProjectShopee.Config.Catalog = ProjectShopee.Config.Catalogs.Store1
+end
+
+local function GetCatalogForPos(posStr)
+    local storeID = "Store1"
+    if ProjectShopee.Config.Shops[posStr] and ProjectShopee.Config.Shops[posStr].StoreID then
+        storeID = ProjectShopee.Config.Shops[posStr].StoreID
+    elseif ProjectShopee.Config.Checkouts[posStr] and type(ProjectShopee.Config.Checkouts[posStr]) == "string" then
+        storeID = ProjectShopee.Config.Checkouts[posStr]
+    end
+    VerifyConfig()
+    return ProjectShopee.Config.Catalogs[storeID] or ProjectShopee.Config.Catalogs.Store1, storeID
 end
 
 local function OnClientCommand(module, command, player, args)
@@ -181,7 +230,7 @@ local function OnClientCommand(module, command, player, args)
     
     elseif command == ProjectShopee.Commands.AddShop then
         if player:getAccessLevel() ~= "admin" then return end
-        ProjectShopee.Config.Shops[args.pos] = { Items = {} }
+        ProjectShopee.Config.Shops[args.pos] = { Items = {}, StoreID = args.storeID or "Store1" }
         SaveConfig()
         BroadcastConfig()
         
@@ -209,7 +258,7 @@ local function OnClientCommand(module, command, player, args)
 
     elseif command == ProjectShopee.Commands.AddCheckout then
         if player:getAccessLevel() ~= "admin" then return end
-        ProjectShopee.Config.Checkouts[args.pos] = true
+        ProjectShopee.Config.Checkouts[args.pos] = args.storeID or "Store1"
         SaveConfig()
         BroadcastConfig()
         
@@ -228,6 +277,18 @@ local function OnClientCommand(module, command, player, args)
     elseif command == ProjectShopee.Commands.RemoveATM then
         if player:getAccessLevel() ~= "admin" then return end
         ProjectShopee.Config.ATMs[args.pos] = nil
+        SaveConfig()
+        BroadcastConfig()
+        
+    elseif command == ProjectShopee.Commands.AddAnimalShop then
+        if player:getAccessLevel() ~= "admin" then return end
+        ProjectShopee.Config.AnimalShops[args.pos] = true
+        SaveConfig()
+        BroadcastConfig()
+        
+    elseif command == ProjectShopee.Commands.RemoveAnimalShop then
+        if player:getAccessLevel() ~= "admin" then return end
+        ProjectShopee.Config.AnimalShops[args.pos] = nil
         SaveConfig()
         BroadcastConfig()
         
@@ -334,7 +395,12 @@ local function OnClientCommand(module, command, player, args)
 
     elseif command == ProjectShopee.Commands.UpdateCatalog then
         if player:getAccessLevel() ~= "admin" then return end
-        ProjectShopee.Config.Catalog = args.Catalog
+        VerifyConfig()
+        local storeID = args.storeID or "Store1"
+        ProjectShopee.Config.Catalogs[storeID] = args.Catalog
+        if storeID == "Store1" then
+            ProjectShopee.Config.Catalog = args.Catalog
+        end
         SaveConfig()
         BroadcastConfig()
 
@@ -372,14 +438,16 @@ local function OnClientCommand(module, command, player, args)
         local itemName = args.item
         local amount = math.floor(tonumber(args.amount) or 0)
         
+        local catalog, storeID = GetCatalogForPos(args.pos)
+        
         -- Server-side enforcement of limits
         local limit = 10
-        if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[itemName] then
-            limit = ProjectShopee.Config.Catalog.Limits[itemName]
+        if catalog.Limits and catalog.Limits[itemName] then
+            limit = catalog.Limits[itemName]
         end
         if amount <= 0 or amount > limit then return end
         
-        local pricePaid = ProjectShopee.Config.Catalog.Buy[itemName]
+        local pricePaid = catalog.Buy[itemName]
         if not pricePaid then return end
         
         local totalCost = pricePaid * amount
@@ -412,6 +480,7 @@ local function OnClientCommand(module, command, player, args)
             sendServerCommand(player, "ProjectShopee", "ClientSyncInventory", {})
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="-$" .. tostring(totalCost), color={r=255, g=0, b=0}})
             SyncPlayerBalance(player)
+            BroadcastSafeZone(username, math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
         end
         
     elseif command == ProjectShopee.Commands.CheckoutCart then
@@ -419,6 +488,7 @@ local function OnClientCommand(module, command, player, args)
         if not cart then return end
         if #cart > 50 then return end
         
+        local catalog, storeID = GetCatalogForPos(args.pos)
         local totalCost = 0
         local itemsStrList = {}
         local sanitizedCart = {}
@@ -427,13 +497,13 @@ local function OnClientCommand(module, command, player, args)
             
             -- Server-side enforcement of limits
             local limit = 10
-            if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[cartItem.item] then
-                limit = ProjectShopee.Config.Catalog.Limits[cartItem.item]
+            if catalog.Limits and catalog.Limits[cartItem.item] then
+                limit = catalog.Limits[cartItem.item]
             end
             if amt > limit then amt = limit end
             
             if amt > 0 then
-                local realPrice = ProjectShopee.Config.Catalog.Buy[cartItem.item] or 0
+                local realPrice = catalog.Buy[cartItem.item] or 0
                 totalCost = totalCost + (realPrice * amt)
                 table.insert(itemsStrList, tostring(amt) .. "x " .. cartItem.item)
                 table.insert(sanitizedCart, {item = cartItem.item, amount = amt})
@@ -472,12 +542,14 @@ local function OnClientCommand(module, command, player, args)
             sendServerCommand(player, "ProjectShopee", "ClientSyncInventory", {})
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="-$" .. tostring(totalCost), color={r=255, g=0, b=0}})
             SyncPlayerBalance(player)
+            BroadcastSafeZone(username, math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
         end
         
     elseif command == ProjectShopee.Commands.SellItem then
         local itemName = args.item
         local amount = math.floor(tonumber(args.amount) or 0)
-        local price = ProjectShopee.Config.Catalog.Sell[itemName]
+        local catalog, storeID = GetCatalogForPos(args.pos)
+        local price = catalog.Sell[itemName]
         
         if amount <= 0 or not price then return end
         
@@ -538,6 +610,7 @@ local function OnClientCommand(module, command, player, args)
         
         if not ProjectShopee.ActiveCheckouts[pos] or ProjectShopee.ActiveCheckouts[pos] == username then
             ProjectShopee.ActiveCheckouts[pos] = username
+            VerifyConfig()
             sendServerCommand(player, "ProjectShopee", ProjectShopee.Commands.SyncConfig, ProjectShopee.Config)
             sendServerCommand(player, "ProjectShopee", "AllowOpenCheckout", {pos = pos})
         else
@@ -775,6 +848,7 @@ local function OnClientCommand(module, command, player, args)
             sendServerCommand(player, "ProjectShopee", "ClientSyncInventory", {})
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="-$" .. tostring(totalCost), color={r=255, g=0, b=0}})
             SyncPlayerBalance(player)
+            BroadcastSafeZone(username, math.floor(player:getX()), math.floor(player:getY()), math.floor(player:getZ()))
         else
             sendServerCommand(player, "ProjectShopee", "ClientSay", {text="Insufficient balance!", color={r=255, g=0, b=0}})
         end

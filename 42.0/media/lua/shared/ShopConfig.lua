@@ -7,6 +7,7 @@ ProjectShopee.Config = {
     Shops = {},
     Checkouts = {},
     ATMs = {},
+    AnimalShops = {},
     MoneyRatios = {
         ["Base.Money"] = 1,
         ["Base.MoneyBundle"] = 100
@@ -34,6 +35,8 @@ ProjectShopee.Commands = {
     RemoveCheckout = "ProjectShopee_RemoveCheckout",
     AddATM = "ProjectShopee_AddATM",
     RemoveATM = "ProjectShopee_RemoveATM",
+    AddAnimalShop = "ProjectShopee_AddAnimalShop",
+    RemoveAnimalShop = "ProjectShopee_RemoveAnimalShop",
     UpdateMoneyRatios = "ProjectShopee_UpdateMoneyRatios",
     DepositMoney = "ProjectShopee_DepositMoney",
     TransferMoney = "ProjectShopee_TransferMoney",
@@ -78,4 +81,10 @@ function ProjectShopee.Shared.IsATM(square)
     if not square then return false end
     local pos = ProjectShopee.Shared.GetPosString(square)
     return ProjectShopee.Config.ATMs[pos] == true
+end
+
+function ProjectShopee.Shared.IsAnimalShop(square)
+    if not square then return false end
+    local pos = ProjectShopee.Shared.GetPosString(square)
+    return ProjectShopee.Config.AnimalShops and ProjectShopee.Config.AnimalShops[pos] == true
 end

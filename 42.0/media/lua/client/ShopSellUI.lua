@@ -91,10 +91,12 @@ function ShopSellUI:populateList()
     local counts = {}
     local sampleItems = {}
     
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
+    
     for i=0, items:size()-1 do
         local invItem = items:get(i)
         local fullType = invItem:getFullType()
-        if ProjectShopee.Config.Catalog.Sell and ProjectShopee.Config.Catalog.Sell[fullType] then
+        if catalog.Sell and catalog.Sell[fullType] then
             if not counts[fullType] then
                 counts[fullType] = 0
                 sampleItems[fullType] = invItem
@@ -104,7 +106,7 @@ function ShopSellUI:populateList()
     end
     
     for fullType, count in pairs(counts) do
-        local price = ProjectShopee.Config.Catalog.Sell[fullType]
+        local price = catalog.Sell[fullType]
         local itemObj = getScriptManager():getItem(fullType)
         self.sellList:addItem(fullType, {name=fullType, count=count, price=price, itemObj=itemObj})
     end
@@ -130,7 +132,7 @@ function ShopSellUI:onSell()
     self.sellBtn.backgroundColor = {r=0.5, g=0.5, b=0.5, a=1.0}
     self.sellAllBtn.backgroundColor = {r=0.5, g=0.5, b=0.5, a=1.0}
     
-    sendClientCommand("ProjectShopee", ProjectShopee.Commands.SellItem, {item=itemName, amount=amount, pos=self.pos})
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.SellItem, {item=itemName, amount=amount, pos=self.pos, storeID=self.storeID})
 end
 
 function ShopSellUI:onSellAll()
@@ -148,7 +150,7 @@ function ShopSellUI:onSellAll()
     self.sellBtn.backgroundColor = {r=0.5, g=0.5, b=0.5, a=1.0}
     self.sellAllBtn.backgroundColor = {r=0.5, g=0.5, b=0.5, a=1.0}
     
-    sendClientCommand("ProjectShopee", ProjectShopee.Commands.SellItem, {item=itemName, amount=amount, pos=self.pos})
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.SellItem, {item=itemName, amount=amount, pos=self.pos, storeID=self.storeID})
 end
 
 function ShopSellUI:prerender()
@@ -183,14 +185,15 @@ function ShopSellUI:update()
     end
 end
 
-function ShopSellUI:new(x, y, width, height, player, pos)
+function ShopSellUI:new(x, y, width, height, player, pos, storeID)
     local o = {}
     x = getCore():getScreenWidth() / 2 - (width / 2)
     y = getCore():getScreenHeight() / 2 - (height / 2)
     o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Sell My Items"
+    o.storeID = storeID or "Store1"
+    o.title = "Sell My Items (" .. o.storeID .. ")"
     o.resizable = false
     o.pin = true
     o.isCollapsed = false

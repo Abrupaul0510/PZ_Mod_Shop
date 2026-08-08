@@ -24,7 +24,11 @@ function ShopAdminUI:initialise()
     self.categoryCombo:initialise()
     self:addChild(self.categoryCombo)
     
-    self.masterList = ISScrollingListBox:new(10, 60, 380, self.height - 110)
+    self.moduleCombo = ISComboBox:new(10, 60, 380, 24, self, self.onModuleChange)
+    self.moduleCombo:initialise()
+    self:addChild(self.moduleCombo)
+    
+    self.masterList = ISScrollingListBox:new(10, 90, 380, self.height - 140)
     self.masterList:initialise()
     self.masterList:instantiate()
     self.masterList.itemheight = itemHgt
@@ -125,16 +129,27 @@ function ShopAdminUI:initialise()
         self.categoryCombo:addOption(c)
     end
     
+    local modMap = {["All"] = true}
+    for _, item in ipairs(self.allItems) do
+        local mod = item:getModuleName() or "Base"
+        modMap[mod] = true
+    end
+    local sortedMods = {}
+    for c, _ in pairs(modMap) do table.insert(sortedMods, c) end
+    table.sort(sortedMods)
+    for _, c in ipairs(sortedMods) do
+        self.moduleCombo:addOption(c)
+    end
+    self.categoryCombo.selected = 1
+    self.moduleCombo.selected = 1
+    
     self.catalogData = { Buy = {}, Sell = {}, Limits = {} }
-    if ProjectShopee and ProjectShopee.Config and ProjectShopee.Config.Catalog then
-        if ProjectShopee.Config.Catalog.Buy then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Buy) do self.catalogData.Buy[k] = v end
-        end
-        if ProjectShopee.Config.Catalog.Sell then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Sell) do self.catalogData.Sell[k] = v end
-        end
-        if ProjectShopee.Config.Catalog.Limits then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Limits) do self.catalogData.Limits[k] = v end
+    if ProjectShopee and ProjectShopee.Config and ProjectShopee.Config.Catalogs then
+        local catData = ProjectShopee.Config.Catalogs[self.storeID]
+        if catData then
+            if catData.Buy then for k,v in pairs(catData.Buy) do self.catalogData.Buy[k] = v end end
+            if catData.Sell then for k,v in pairs(catData.Sell) do self.catalogData.Sell[k] = v end end
+            if catData.Limits then for k,v in pairs(catData.Limits) do self.catalogData.Limits[k] = v end end
         end
     end
     
@@ -147,22 +162,30 @@ function ShopAdminUI:populateMasterList()
     local searchTxt = string.lower(self.searchEntry:getInternalText() or "")
     local selCat = self.categoryCombo.options[self.categoryCombo.selected]
     if not selCat then selCat = "All" end
+    local selMod = self.moduleCombo.options[self.moduleCombo.selected]
+    if not selMod then selMod = "All" end
     
     for _, item in ipairs(self.allItems) do
         local name = string.lower(item:getDisplayName())
         local fName = string.lower(item:getFullName())
         local cat = item:getDisplayCategory() or "Other"
+        local mod = item:getModuleName() or "Base"
         
         local matchCat = (selCat == "All" or cat == selCat)
+        local matchMod = (selMod == "All" or mod == selMod)
         local matchSearch = (searchTxt == "" or string.find(name, searchTxt) or string.find(fName, searchTxt))
         
-        if matchCat and matchSearch then
+        if matchCat and matchMod and matchSearch then
             self.masterList:addItem(item:getFullName(), item)
         end
     end
 end
 
 function ShopAdminUI:onCategoryChange()
+    self:populateMasterList()
+end
+
+function ShopAdminUI:onModuleChange()
     self:populateMasterList()
 end
 
@@ -265,15 +288,12 @@ end
 function ShopAdminUI:refresh()
     -- Sync internal catalog data with global config if it changed
     self.catalogData = { Buy = {}, Sell = {}, Limits = {} }
-    if ProjectShopee and ProjectShopee.Config and ProjectShopee.Config.Catalog then
-        if ProjectShopee.Config.Catalog.Buy then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Buy) do self.catalogData.Buy[k] = v end
-        end
-        if ProjectShopee.Config.Catalog.Sell then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Sell) do self.catalogData.Sell[k] = v end
-        end
-        if ProjectShopee.Config.Catalog.Limits then
-            for k,v in pairs(ProjectShopee.Config.Catalog.Limits) do self.catalogData.Limits[k] = v end
+    if ProjectShopee and ProjectShopee.Config and ProjectShopee.Config.Catalogs then
+        local catData = ProjectShopee.Config.Catalogs[self.storeID]
+        if catData then
+            if catData.Buy then for k,v in pairs(catData.Buy) do self.catalogData.Buy[k] = v end end
+            if catData.Sell then for k,v in pairs(catData.Sell) do self.catalogData.Sell[k] = v end end
+            if catData.Limits then for k,v in pairs(catData.Limits) do self.catalogData.Limits[k] = v end end
         end
     end
     self:populateMasterList()
@@ -281,7 +301,7 @@ function ShopAdminUI:refresh()
 end
 
 function ShopAdminUI:onSave()
-    sendClientCommand("ProjectShopee", ProjectShopee.Commands.UpdateCatalog, {Catalog=self.catalogData})
+    sendClientCommand("ProjectShopee", ProjectShopee.Commands.UpdateCatalog, {Catalog=self.catalogData, storeID=self.storeID})
     self:close()
 end
 
@@ -292,14 +312,15 @@ function ShopAdminUI:render()
     self:drawText("Sell Catalog:", 410, 265, 1, 1, 1, 1, UIFont.Small)
 end
 
-function ShopAdminUI:new(x, y, width, height, player)
+function ShopAdminUI:new(x, y, width, height, player, storeID)
     local o = {}
     x = getCore():getScreenWidth() - width - 50
     y = getCore():getScreenHeight() / 2 - (height / 2)
     o = ISCollapsableWindow:new(x, y, 800, 560)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Admin Catalog Manager"
+    o.storeID = storeID or "Store1"
+    o.title = "Admin Catalog Manager (" .. o.storeID .. ")"
     o.resizable = false
     o.pin = true
     o.isCollapsed = false

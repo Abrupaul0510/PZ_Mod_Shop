@@ -26,7 +26,7 @@ function ShopTileStockUI:create()
     local listWidth = (self.width / 2) - 15
     
     -- Global Catalog List
-    self.globalList = ISScrollingListBox:new(10, 50, listWidth, self.height - 100)
+    self.globalList = ISScrollingListBox:new(10, 90, listWidth, self.height - 140)
     self.globalList:initialise()
     self.globalList:instantiate()
     self.globalList.itemheight = itemHgt
@@ -37,7 +37,7 @@ function ShopTileStockUI:create()
     self:addChild(self.globalList)
     
     -- Tile Stock List
-    self.stockList = ISScrollingListBox:new((self.width / 2) + 5, 50, listWidth, self.height - 100)
+    self.stockList = ISScrollingListBox:new((self.width / 2) + 5, 90, listWidth, self.height - 140)
     self.stockList:initialise()
     self.stockList:instantiate()
     self.stockList.itemheight = itemHgt
@@ -64,11 +64,35 @@ function ShopTileStockUI:create()
         end
     end
     
-    self.searchEntry = ISTextEntryBox:new("", 150, 10, 150, 25)
+    self.searchEntry = ISTextEntryBox:new("", 10, 40, 200, 25)
     self.searchEntry:initialise()
     self.searchEntry:instantiate()
     self:addChild(self.searchEntry)
     self.lastSearchText = ""
+    
+    self.moduleCombo = ISComboBox:new(220, 40, 200, 25, self, self.populateLists)
+    self.moduleCombo:initialise()
+    self:addChild(self.moduleCombo)
+    
+    local modMap = {["All"] = true}
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
+    if catalog and catalog.Buy then
+        for itemName, _ in pairs(catalog.Buy) do
+            local itemObj = ScriptManager.instance:getItem(itemName)
+            if itemObj then
+                local mod = itemObj:getModuleName() or "Base"
+                modMap[mod] = true
+            end
+        end
+    end
+    
+    local sortedMods = {}
+    for c, _ in pairs(modMap) do table.insert(sortedMods, c) end
+    table.sort(sortedMods)
+    for _, c in ipairs(sortedMods) do
+        self.moduleCombo:addOption(c)
+    end
+    self.moduleCombo.selected = 1
     
     self:populateLists()
 end
@@ -112,15 +136,22 @@ function ShopTileStockUI:populateLists()
     local searchText = self.searchEntry and self.searchEntry:getText() or ""
     searchText = string.lower(searchText)
     
-    if ProjectShopee.Config.Catalog.Buy then
-        for itemName, price in pairs(ProjectShopee.Config.Catalog.Buy) do
+    local selMod = self.moduleCombo and self.moduleCombo.options[self.moduleCombo.selected] or "All"
+    
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
+    if catalog and catalog.Buy then
+        for itemName, price in pairs(catalog.Buy) do
             local itemObj = ScriptManager.instance:getItem(itemName)
             local displayName = itemName
+            local mod = "Base"
             if itemObj then
                 displayName = itemObj:getDisplayName()
+                mod = itemObj:getModuleName() or "Base"
             end
             
-            if searchText == "" or string.find(string.lower(displayName), searchText, 1, true) then
+            local matchMod = (selMod == "All" or mod == selMod)
+            
+            if matchMod and (searchText == "" or string.find(string.lower(displayName), searchText, 1, true)) then
                 if self.stockedItems[itemName] then
                     self.stockList:addItem(displayName, {name=itemName, obj=itemObj})
                 else
@@ -156,15 +187,15 @@ end
 function ShopTileStockUI:prerender()
     ISPanel.prerender(self)
     self:drawText("Manage Tile Stock", 10, 10, 1, 1, 1, 1, UIFont.Medium)
-    self:drawText("Global Catalog (Not on this tile)", 10, 30, 1, 1, 1, 1, UIFont.Small)
-    self:drawText("Stocked on this Tile", (self.width / 2) + 5, 30, 1, 1, 1, 1, UIFont.Small)
+    self:drawText("Global Catalog (Not on this tile)", 10, 70, 1, 1, 1, 1, UIFont.Small)
+    self:drawText("Stocked on this Tile", (self.width / 2) + 5, 70, 1, 1, 1, 1, UIFont.Small)
 end
 
 function ShopTileStockUI:close()
     self:removeFromUIManager()
 end
 
-function ShopTileStockUI:new(x, y, width, height, player, pos)
+function ShopTileStockUI:new(x, y, width, height, player, pos, storeID)
     local o = {}
     x = getCore():getScreenWidth() - width - 50
     y = getCore():getScreenHeight() / 2 - (height / 2)
@@ -176,6 +207,7 @@ function ShopTileStockUI:new(x, y, width, height, player, pos)
     o.playerNum = player:getPlayerNum()
     o.player = player
     o.pos = pos
+    o.storeID = storeID or "Store1"
     o.moveWithMouse = true
     return o
 end

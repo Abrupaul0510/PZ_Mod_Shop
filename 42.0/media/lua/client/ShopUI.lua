@@ -143,8 +143,9 @@ end
 function ShopUI:refresh()
     self.masterBuyList = {}
     
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
     local buyCategories = { ["All Categories"] = true }
-    for itemName, price in pairs(ProjectShopee.Config.Catalog.Buy) do
+    for itemName, price in pairs(catalog.Buy or {}) do
         if ProjectShopee.Config.Shops[self.pos] and ProjectShopee.Config.Shops[self.pos].Items and ProjectShopee.Config.Shops[self.pos].Items[itemName] then
             local itemObj = getScriptManager():getItem(itemName)
             local cat = itemObj and itemObj:getDisplayCategory() or "Unknown"
@@ -172,16 +173,19 @@ end
 
 function ShopUI:populateCartList()
     self.cartList:clear()
-    ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
+    ProjectShopee.Client.Carts = ProjectShopee.Client.Carts or { Store1={}, Store2={} }
+    local cartData = ProjectShopee.Client.Carts[self.storeID] or {}
+    ProjectShopee.Client.Carts[self.storeID] = cartData
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
     
-    for itemName, amount in pairs(ProjectShopee.Client.Cart) do
-        local price = ProjectShopee.Config.Catalog.Buy[itemName]
+    for itemName, amount in pairs(cartData) do
+        local price = catalog.Buy[itemName]
         if price then
             local itemObj = getScriptManager():getItem(itemName)
             self.cartList:addItem(itemName, {name=itemName, amount=amount, price=price, itemObj=itemObj})
         else
             -- Item no longer in catalog
-            ProjectShopee.Client.Cart[itemName] = nil
+            cartData[itemName] = nil
         end
     end
 end
@@ -219,8 +223,8 @@ function ShopUI:onAddToCart()
     local secondary = player:getSecondaryHandItem()
     local hasBag = false
     
-    if primary and primary:getFullType() == "Base.Plasticbag" then hasBag = true end
-    if secondary and secondary:getFullType() == "Base.Plasticbag" then hasBag = true end
+    if primary and string.find(string.lower(primary:getName()), "plastic bag") then hasBag = true end
+    if secondary and string.find(string.lower(secondary:getName()), "plastic bag") then hasBag = true end
     
     if not hasBag then
         player:Say("You need to get a Plastic Bag equipped")
@@ -230,22 +234,25 @@ function ShopUI:onAddToCart()
     local item = self.buyList.items[self.buyList.selected]
     if not item then return end
     
+    local catalog = ProjectShopee.Config.Catalogs and ProjectShopee.Config.Catalogs[self.storeID] or ProjectShopee.Config.Catalog
     local itemName = item.item.name
-    local price = ProjectShopee.Config.Catalog.Buy[itemName]
+    local price = catalog.Buy[itemName]
     if not price then return end
     local amount = tonumber(self.buyAmountEntry:getText()) or 1
     if amount < 1 then amount = 1 end
     
     local limit = 50
-    if ProjectShopee.Config.Catalog.Limits and ProjectShopee.Config.Catalog.Limits[itemName] then
-        limit = ProjectShopee.Config.Catalog.Limits[itemName]
+    if catalog.Limits and catalog.Limits[itemName] then
+        limit = catalog.Limits[itemName]
     end
     
-    ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
+    ProjectShopee.Client.Carts = ProjectShopee.Client.Carts or { Store1={}, Store2={} }
+    local cartData = ProjectShopee.Client.Carts[self.storeID] or {}
+    ProjectShopee.Client.Carts[self.storeID] = cartData
     
     local maxCartSize = 20
     local currentTotal = 0
-    for _, qty in pairs(ProjectShopee.Client.Cart) do
+    for _, qty in pairs(cartData) do
         currentTotal = currentTotal + qty
     end
     
@@ -254,14 +261,14 @@ function ShopUI:onAddToCart()
         return
     end
     
-    local currentInCart = ProjectShopee.Client.Cart[itemName] or 0
+    local currentInCart = cartData[itemName] or 0
     
     if currentInCart + amount > limit then
         player:Say("Max limit for this item is " .. tostring(limit))
         return
     end
     
-    ProjectShopee.Client.Cart[itemName] = currentInCart + amount
+    cartData[itemName] = currentInCart + amount
     self:populateCartList()
     player:Say("Added " .. tostring(amount) .. "x " .. (item.item.itemObj and item.item.itemObj:getDisplayName() or itemName) .. " to Cart!")
 end
@@ -274,21 +281,23 @@ function ShopUI:onRemoveFromCart()
     local amountToRemove = tonumber(self.removeAmountEntry:getText()) or 1
     if amountToRemove < 1 then amountToRemove = 1 end
     
-    ProjectShopee.Client.Cart = ProjectShopee.Client.Cart or {}
-    local currentInCart = ProjectShopee.Client.Cart[itemName] or 0
+    local cartData = ProjectShopee.Client.Carts and ProjectShopee.Client.Carts[self.storeID] or {}
+    local currentInCart = cartData[itemName] or 0
     
     if currentInCart <= amountToRemove then
-        ProjectShopee.Client.Cart[itemName] = nil
+        cartData[itemName] = nil
         getPlayer():Say("Removed all " .. (item.item.itemObj and item.item.itemObj:getDisplayName() or itemName) .. " from Cart.")
     else
-        ProjectShopee.Client.Cart[itemName] = currentInCart - amountToRemove
+        cartData[itemName] = currentInCart - amountToRemove
         getPlayer():Say("Removed " .. tostring(amountToRemove) .. "x " .. (item.item.itemObj and item.item.itemObj:getDisplayName() or itemName) .. " from Cart.")
     end
     self:populateCartList()
 end
 
 function ShopUI:onClearCart()
-    ProjectShopee.Client.Cart = {}
+    if ProjectShopee.Client.Carts then
+        ProjectShopee.Client.Carts[self.storeID] = {}
+    end
     self:populateCartList()
     getPlayer():Say("Cart cleared.")
 end
@@ -362,14 +371,15 @@ function ShopUI:update()
     end
 end
 
-function ShopUI:new(x, y, width, height, player, pos)
+function ShopUI:new(x, y, width, height, player, pos, storeID)
     local o = {}
     x = getCore():getScreenWidth() - width - 50
     y = getCore():getScreenHeight() / 2 - (height / 2)
     o = ISCollapsableWindow:new(x, y, 600, 500)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Kiwi Store Test"
+    o.storeID = storeID or "Store1"
+    o.title = "Kiwi Store (" .. o.storeID .. ")"
     o.resizable = false
     o.pin = true
     o.isCollapsed = false
